@@ -489,40 +489,6 @@
             font-size: 8px;
         }
 
-        .redistribucion-panel {
-            background: #fffbeb;
-            border: 1px solid var(--warning);
-            border-radius: var(--border-radius);
-            padding: 15px;
-            margin: 15px 0;
-        }
-
-        .redistribucion-title {
-            color: var(--warning);
-            font-weight: 700;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .exceso-panel {
-            background: #f0f9ff;
-            border: 1px solid var(--success);
-            border-radius: var(--border-radius);
-            padding: 15px;
-            margin: 15px 0;
-        }
-
-        .exceso-title {
-            color: var(--success);
-            font-weight: 700;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
         .modal {
             display: none;
             position: fixed;
@@ -689,40 +655,6 @@
                             <span>Meta diaria sugerida:</span>
                             <span id="metaDiariaSugerida">$136.36</span>
                         </div>
-                    </div>
-
-                    <div class="redistribucion-panel">
-                        <div class="redistribucion-title">
-                            <i class="fas fa-balance-scale"></i> Redistribución por Déficit
-                        </div>
-                        <div class="summary-item">
-                            <span>Faltante a redistribuir:</span>
-                            <span id="faltanteRedistribuir">$0.00</span>
-                        </div>
-                        <div class="summary-item">
-                            <span>Nueva meta diaria:</span>
-                            <span id="nuevaMetaDiaria">$136.36</span>
-                        </div>
-                        <button id="btnAplicarRedistribucion" class="btn-warning">
-                            <i class="fas fa-calculator"></i> Aplicar Redistribución
-                        </button>
-                    </div>
-
-                    <div class="exceso-panel">
-                        <div class="exceso-title">
-                            <i class="fas fa-chart-line"></i> Redistribución por Exceso
-                        </div>
-                        <div class="summary-item">
-                            <span>Exceso a redistribuir:</span>
-                            <span id="excesoRedistribuir">$0.00</span>
-                        </div>
-                        <div class="summary-item">
-                            <span>Nueva meta diaria:</span>
-                            <span id="nuevaMetaDiariaExceso">$136.36</span>
-                        </div>
-                        <button id="btnAplicarRedistribucionExceso" class="btn-success">
-                            <i class="fas fa-calculator"></i> Aplicar Redistribución
-                        </button>
                     </div>
                 </div>
                 
@@ -949,7 +881,6 @@
         let currentMonth = currentDate.getMonth();
         let currentYear = currentDate.getFullYear();
         let currentDayKey = `${currentDate.getDate()}-${currentDate.getMonth()}-${currentDate.getFullYear()}`;
-        let redistribucionAutomatica = true; // Nueva variable para controlar redistribución automática
         
         // Elementos del DOM
         const totalGanarInput = document.getElementById('totalGanar');
@@ -992,12 +923,6 @@
         const progressMensualDetailsElement = document.getElementById('progressMensualDetails');
         const listaDiasTrabajadosElement = document.getElementById('listaDiasTrabajados');
         const btnReiniciarMes = document.getElementById('btnReiniciarMes');
-        const faltanteRedistribuirElement = document.getElementById('faltanteRedistribuir');
-        const nuevaMetaDiariaElement = document.getElementById('nuevaMetaDiaria');
-        const btnAplicarRedistribucion = document.getElementById('btnAplicarRedistribucion');
-        const excesoRedistribuirElement = document.getElementById('excesoRedistribuir');
-        const nuevaMetaDiariaExcesoElement = document.getElementById('nuevaMetaDiariaExceso');
-        const btnAplicarRedistribucionExceso = document.getElementById('btnAplicarRedistribucionExceso');
         const btnFinalizarDia = document.getElementById('btnFinalizarDia');
         const modalResumenDia = document.getElementById('modalResumenDia');
         const closeResumenModal = document.getElementById('closeResumenModal');
@@ -1035,7 +960,6 @@
             saldoAcumuladoElement.textContent = `$${saldoAcumulado.toFixed(2)}`;
             actualizarResumenMensualCompleto();
             generarCalendario();
-            calcularRedistribucion(); // Añadido para calcular redistribución al actualizar UI
         }
         
         // Configurar eventos
@@ -1048,8 +972,6 @@
             prevMonthButton.addEventListener('click', () => cambiarMes(-1));
             nextMonthButton.addEventListener('click', () => cambiarMes(1));
             btnReiniciarMes.addEventListener('click', reiniciarMes);
-            btnAplicarRedistribucion.addEventListener('click', aplicarRedistribucion);
-            btnAplicarRedistribucionExceso.addEventListener('click', aplicarRedistribucionExceso);
             closeResumenModal.addEventListener('click', () => modalResumenDia.style.display = 'none');
             btnConfirmarFinalizar.addEventListener('click', finalizarDia);
             
@@ -1117,53 +1039,6 @@
             const hoy = new Date();
             const dayKey = `${hoy.getDate()}-${hoy.getMonth()}-${hoy.getFullYear()}`;
             
-            // Aplicar redistribución automática si hay déficit o exceso
-            const diferencia = totalAcumulado - metaDiaria;
-            const lastDay = new Date(currentYear, currentMonth + 1, 0);
-            const daysInMonth = lastDay.getDate();
-            
-            // Calcular días futuros laborables
-            let diasFuturosLaborables = 0;
-            
-            for (let i = 1; i <= daysInMonth; i++) {
-                const dateStr = `${currentYear}-${currentMonth + 1}-${i}`;
-                const isRestDay = diasDescanso.includes(dateStr);
-                
-                if (!isRestDay && i > hoy.getDate() && 
-                    currentMonth === hoy.getMonth() && currentYear === hoy.getFullYear()) {
-                    diasFuturosLaborables++;
-                }
-            }
-            
-            // Aplicar redistribución automática si hay días futuros
-            let mensajeFinalizacion = "Día finalizado automáticamente.";
-            
-            if (diasFuturosLaborables > 0) {
-                if (diferencia < 0 && Math.abs(diferencia) > 0.01) {
-                    // Aplicar redistribución por déficit
-                    const deficit = Math.abs(diferencia);
-                    const nuevaMeta = metaDiaria + (deficit / diasFuturosLaborables);
-                    metaDiaria = nuevaMeta;
-                    totalGanarInput.value = nuevaMeta.toFixed(2);
-                    
-                    // Recalcular objetivos
-                    calcularObjetivos();
-                    
-                    mensajeFinalizacion = `Día finalizado automáticamente. Redistribución aplicada por déficit. Nueva meta diaria: $${nuevaMeta.toFixed(2)}`;
-                } else if (diferencia > 0) {
-                    // Aplicar redistribución por exceso
-                    const exceso = diferencia;
-                    const nuevaMeta = Math.max(metaDiaria * 0.5, metaDiaria - (exceso / diasFuturosLaborables));
-                    metaDiaria = nuevaMeta;
-                    totalGanarInput.value = nuevaMeta.toFixed(2);
-                    
-                    // Recalcular objetivos
-                    calcularObjetivos();
-                    
-                    mensajeFinalizacion = `Día finalizado automáticamente. Redistribución aplicada por exceso. Nueva meta diaria: $${nuevaMeta.toFixed(2)}`;
-                }
-            }
-            
             // Guardar el total del día en el historial de días trabajados
             diasTrabajados[dayKey] = (diasTrabajados[dayKey] || 0) + totalAcumulado;
             
@@ -1185,9 +1060,6 @@
             // Actualizar resumen mensual
             actualizarResumenMensualCompleto();
             
-            // Recalcular redistribución
-            calcularRedistribucion();
-            
             // Regenerar el calendario para actualizar los días marcados
             generarCalendario();
             
@@ -1195,7 +1067,7 @@
             guardarValores();
             
             // Actualizar notificación
-            autoFinishMessage.textContent = mensajeFinalizacion;
+            autoFinishMessage.textContent = "Día finalizado automáticamente.";
             
             // Ocultar notificación después de 5 segundos
             setTimeout(() => {
@@ -1305,9 +1177,6 @@
             
             // Regenerar el calendario
             generarCalendario();
-            
-            // Actualizar redistribución
-            calcularRedistribucion();
         }
         
         // Alternar día de descanso
@@ -1325,252 +1194,7 @@
             }
             
             actualizarResumenMensual();
-            calcularRedistribucion();
             guardarValores();
-        }
-        
-        // Función corregida para calcular redistribución
-        function calcularRedistribucion() {
-            const today = new Date();
-            const lastDay = new Date(currentYear, currentMonth + 1, 0);
-            const daysInMonth = lastDay.getDate();
-            
-            // Solo calcular para el mes actual y si no es un mes futuro
-            if (currentYear > today.getFullYear() || 
-                (currentYear === today.getFullYear() && currentMonth > today.getMonth())) {
-                faltanteRedistribuirElement.textContent = '$0.00';
-                excesoRedistribuirElement.textContent = '$0.00';
-                nuevaMetaDiariaElement.textContent = `$${metaDiaria.toFixed(2)}`;
-                nuevaMetaDiariaExcesoElement.textContent = `$${metaDiaria.toFixed(2)}`;
-                return;
-            }
-            
-            // Calcular días pasados laborables y días futuros laborables
-            let diasPasadosLaborables = 0;
-            let diasFuturosLaborables = 0;
-            let totalFaltante = 0;
-            let totalExceso = 0;
-            
-            for (let i = 1; i <= daysInMonth; i++) {
-                const dayKey = `${i}-${currentMonth}-${currentYear}`;
-                const dateStr = `${currentYear}-${currentMonth + 1}-${i}`;
-                const isRestDay = diasDescanso.includes(dateStr);
-                
-                // Solo considerar días laborables
-                if (!isRestDay) {
-                    const dayDate = new Date(currentYear, currentMonth, i);
-                    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-                    
-                    // Si es un día pasado
-                    if (dayDate < todayStart) {
-                        diasPasadosLaborables++;
-                        
-                        // Verificar si el día fue trabajado
-                        if (diasTrabajados[dayKey]) {
-                            const gananciaDia = diasTrabajados[dayKey];
-                            if (gananciaDia < metaDiaria) {
-                                totalFaltante += (metaDiaria - gananciaDia);
-                            } else if (gananciaDia > metaDiaria) {
-                                totalExceso += (gananciaDia - metaDiaria);
-                            }
-                        } else {
-                            // Día pasado que no fue trabajado = faltante completo
-                            totalFaltante += metaDiaria;
-                        }
-                    }
-                    // Si es un día futuro (incluyendo hoy si aún no termina)
-                    else if (dayDate >= todayStart) {
-                        diasFuturosLaborables++;
-                    }
-                }
-            }
-            
-            // Calcular nueva meta diaria si hay días futuros
-            if (diasFuturosLaborables > 0) {
-                // Redistribución por déficit
-                const nuevaMetaDeficit = metaDiaria + (totalFaltante / diasFuturosLaborables);
-                
-                faltanteRedistribuirElement.textContent = `$${totalFaltante.toFixed(2)}`;
-                nuevaMetaDiariaElement.textContent = `$${nuevaMetaDeficit.toFixed(2)}`;
-                
-                // Redistribución por exceso
-                const nuevaMetaExceso = Math.max(metaDiaria * 0.5, metaDiaria - (totalExceso / diasFuturosLaborables));
-                
-                excesoRedistribuirElement.textContent = `$${totalExceso.toFixed(2)}`;
-                nuevaMetaDiariaExcesoElement.textContent = `$${nuevaMetaExceso.toFixed(2)}`;
-                
-                // Aplicar redistribución automática si está activada
-                if (redistribucionAutomatica) {
-                    aplicarRedistribucionAutomatica(totalFaltante, totalExceso, diasFuturosLaborables);
-                }
-            } else {
-                faltanteRedistribuirElement.textContent = '$0.00';
-                excesoRedistribuirElement.textContent = '$0.00';
-                nuevaMetaDiariaElement.textContent = `$${metaDiaria.toFixed(2)}`;
-                nuevaMetaDiariaExcesoElement.textContent = `$${metaDiaria.toFixed(2)}`;
-            }
-        }
-        
-        // Nueva función: Aplicar redistribución automática
-        function aplicarRedistribucionAutomatica(totalFaltante, totalExceso, diasFuturosLaborables) {
-            let redistribucionAplicada = false;
-            
-            // Aplicar redistribución por déficit si hay días futuros y faltante
-            if (diasFuturosLaborables > 0 && totalFaltante > 0) {
-                const nuevaMeta = metaDiaria + (totalFaltante / diasFuturosLaborables);
-                metaDiaria = nuevaMeta;
-                totalGanarInput.value = nuevaMeta.toFixed(2);
-                
-                // Recalcular objetivos
-                calcularObjetivos();
-                
-                // Mostrar notificación
-                mostrarNotificacion(`Redistribución automática aplicada. Nueva meta diaria: $${nuevaMeta.toFixed(2)}`, 'success');
-                redistribucionAplicada = true;
-            }
-            
-            // Aplicar redistribución por exceso si hay días futuros y exceso
-            if (diasFuturosLaborables > 0 && totalExceso > 0) {
-                const nuevaMeta = Math.max(metaDiaria * 0.5, metaDiaria - (totalExceso / diasFuturosLaborables));
-                metaDiaria = nuevaMeta;
-                totalGanarInput.value = nuevaMeta.toFixed(2);
-                
-                // Recalcular objetivos
-                calcularObjetivos();
-                
-                // Mostrar notificación
-                mostrarNotificacion(`Redistribución automática por exceso aplicada. Nueva meta diaria: $${nuevaMeta.toFixed(2)}`, 'success');
-                redistribucionAplicada = true;
-            }
-            
-            if (redistribucionAplicada) {
-                // Guardar valores
-                guardarValores();
-            }
-        }
-        
-        // Función corregida para aplicar redistribución por déficit
-        function aplicarRedistribucion() {
-            const today = new Date();
-            const lastDay = new Date(currentYear, currentMonth + 1, 0);
-            const daysInMonth = lastDay.getDate();
-            
-            // Calcular días futuros laborables
-            let diasFuturosLaborables = 0;
-            
-            for (let i = 1; i <= daysInMonth; i++) {
-                const dateStr = `${currentYear}-${currentMonth + 1}-${i}`;
-                const isRestDay = diasDescanso.includes(dateStr);
-                
-                if (!isRestDay && i >= today.getDate() && 
-                    currentMonth === today.getMonth() && currentYear === today.getFullYear()) {
-                    diasFuturosLaborables++;
-                }
-            }
-            
-            const faltanteRedistribuir = parseFloat(faltanteRedistribuirElement.textContent.replace('$', ''));
-            
-            if (diasFuturosLaborables > 0 && faltanteRedistribuir > 0) {
-                const nuevaMeta = metaDiaria + (faltanteRedistribuir / diasFuturosLaborables);
-                metaDiaria = nuevaMeta;
-                totalGanarInput.value = nuevaMeta.toFixed(2);
-                
-                // Recalcular objetivos
-                calcularObjetivos();
-                
-                // Mostrar confirmación
-                mostrarNotificacion(`Redistribución aplicada. Nueva meta diaria: $${nuevaMeta.toFixed(2)}`, 'success');
-                
-                // Guardar valores
-                guardarValores();
-                
-                // Recalcular redistribución
-                calcularRedistribucion();
-            } else {
-                mostrarNotificacion('No hay días futuros para redistribuir o no hay déficit', 'warning');
-            }
-        }
-        
-        // Función corregida para aplicar redistribución por exceso
-        function aplicarRedistribucionExceso() {
-            const today = new Date();
-            const lastDay = new Date(currentYear, currentMonth + 1, 0);
-            const daysInMonth = lastDay.getDate();
-            
-            // Calcular días futuros laborables
-            let diasFuturosLaborables = 0;
-            
-            for (let i = 1; i <= daysInMonth; i++) {
-                const dateStr = `${currentYear}-${currentMonth + 1}-${i}`;
-                const isRestDay = diasDescanso.includes(dateStr);
-                
-                if (!isRestDay && i >= today.getDate() && 
-                    currentMonth === today.getMonth() && currentYear === today.getFullYear()) {
-                    diasFuturosLaborables++;
-                }
-            }
-            
-            const excesoRedistribuir = parseFloat(excesoRedistribuirElement.textContent.replace('$', ''));
-            
-            if (diasFuturosLaborables > 0 && excesoRedistribuir > 0) {
-                const nuevaMeta = Math.max(metaDiaria * 0.5, metaDiaria - (excesoRedistribuir / diasFuturosLaborables));
-                metaDiaria = nuevaMeta;
-                totalGanarInput.value = nuevaMeta.toFixed(2);
-                
-                // Recalcular objetivos
-                calcularObjetivos();
-                
-                // Mostrar confirmación
-                mostrarNotificacion(`Redistribución por exceso aplicada. Nueva meta diaria: $${nuevaMeta.toFixed(2)}`, 'success');
-                
-                // Guardar valores
-                guardarValores();
-                
-                // Recalcular redistribución
-                calcularRedistribucion();
-            } else {
-                mostrarNotificacion('No hay días futuros para redistribuir o no hay exceso', 'warning');
-            }
-        }
-        
-        // Función auxiliar para mostrar notificaciones
-        function mostrarNotificacion(mensaje, tipo) {
-            // Crear elemento de notificación si no existe
-            let notificacion = document.getElementById('notificacionGlobal');
-            if (!notificacion) {
-                notificacion = document.createElement('div');
-                notificacion.id = 'notificacionGlobal';
-                notificacion.style.cssText = `
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    padding: 15px 20px;
-                    border-radius: 8px;
-                    color: white;
-                    font-weight: bold;
-                    z-index: 1000;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                    max-width: 300px;
-                    transition: all 0.3s ease;
-                `;
-                document.body.appendChild(notificacion);
-            }
-            
-            // Configurar colores según el tipo
-            const colores = {
-                success: '#10b981',
-                warning: '#f59e0b',
-                error: '#ef4444'
-            };
-            
-            notificacion.style.backgroundColor = colores[tipo] || colores.success;
-            notificacion.textContent = mensaje;
-            notificacion.style.display = 'block';
-            
-            // Ocultar después de 4 segundos
-            setTimeout(() => {
-                notificacion.style.display = 'none';
-            }, 4000);
         }
         
         // Actualizar resumen mensual
@@ -1630,9 +1254,6 @@
             
             // Actualizar lista de días trabajados
             actualizarListaDiasTrabajados();
-            
-            // Calcular redistribución
-            calcularRedistribucion();
         }
         
         // Actualizar lista de días trabajados
@@ -1792,9 +1413,6 @@
                 // Guardar valores
                 guardarValores();
                 
-                // Actualizar redistribución
-                calcularRedistribucion();
-                
                 return;
             }
             
@@ -1853,9 +1471,6 @@
             
             // Guardar valores
             guardarValores();
-            
-            // Actualizar redistribución
-            calcularRedistribucion();
         }
         
         // Verificar y usar saldo automáticamente
@@ -1894,9 +1509,6 @@
             
             // Guardar valores
             guardarValores();
-            
-            // Actualizar redistribución
-            calcularRedistribucion();
         }
         
         // Mostrar resumen del día antes de finalizar
@@ -1943,69 +1555,6 @@
                     <span class="resumen-value">$${saldoAcumulado.toFixed(2)}</span>
                 </div>
             `;
-            
-            // Verificar si hay déficit o exceso para aplicar automáticamente
-            const hoy = new Date();
-            const lastDay = new Date(currentYear, currentMonth + 1, 0);
-            const daysInMonth = lastDay.getDate();
-            
-            // Calcular días futuros laborables
-            let diasFuturosLaborables = 0;
-            
-            for (let i = 1; i <= daysInMonth; i++) {
-                const dateStr = `${currentYear}-${currentMonth + 1}-${i}`;
-                const isRestDay = diasDescanso.includes(dateStr);
-                
-                if (!isRestDay && i > hoy.getDate() && 
-                    currentMonth === hoy.getMonth() && currentYear === hoy.getFullYear()) {
-                    diasFuturosLaborables++;
-                }
-            }
-            
-            // Mostrar información sobre redistribución automática
-            if (diasFuturosLaborables > 0) {
-                if (diferencia < 0 && Math.abs(diferencia) > 0.01) {
-                    const deficit = Math.abs(diferencia);
-                    const nuevaMeta = metaDiaria + (deficit / diasFuturosLaborables);
-                    
-                    contenidoHTML += `
-                        <div class="resumen-destacado" style="background-color: #fffbeb; border-left-color: var(--warning);">
-                            <div class="resumen-item">
-                                <span class="resumen-label">Déficit detectado:</span>
-                                <span class="resumen-value" style="color: var(--warning)">$${deficit.toFixed(2)}</span>
-                            </div>
-                            <div class="resumen-item">
-                                <span class="resumen-label">Nueva meta diaria sugerida:</span>
-                                <span class="resumen-value" style="color: var(--warning)">$${nuevaMeta.toFixed(2)}</span>
-                            </div>
-                            <div class="resumen-item">
-                                <span class="resumen-label">Acción automática:</span>
-                                <span class="resumen-value" style="color: var(--warning)">Se aplicará redistribución</span>
-                            </div>
-                        </div>
-                    `;
-                } else if (diferencia > 0) {
-                    const exceso = diferencia;
-                    const nuevaMeta = Math.max(metaDiaria * 0.5, metaDiaria - (exceso / diasFuturosLaborables));
-                    
-                    contenidoHTML += `
-                        <div class="resumen-destacado" style="background-color: #f0f9ff; border-left-color: var(--success);">
-                            <div class="resumen-item">
-                                <span class="resumen-label">Exceso detectado:</span>
-                                <span class="resumen-value" style="color: var(--success)">$${exceso.toFixed(2)}</span>
-                            </div>
-                            <div class="resumen-item">
-                                <span class="resumen-label">Nueva meta diaria sugerida:</span>
-                                <span class="resumen-value" style="color: var(--success)">$${nuevaMeta.toFixed(2)}</span>
-                            </div>
-                            <div class="resumen-item">
-                                <span class="resumen-label">Acción automática:</span>
-                                <span class="resumen-value" style="color: var(--success)">Se aplicará redistribución</span>
-                            </div>
-                        </div>
-                    `;
-                }
-            }
             
             // Mostrar historial de viajes
             contenidoHTML += `
@@ -2059,55 +1608,8 @@
             // Ocultar modal
             modalResumenDia.style.display = 'none';
             
-            // Aplicar redistribución automática si hay déficit o exceso
-            const diferencia = totalAcumulado - metaDiaria;
-            const hoy = new Date();
-            const lastDay = new Date(currentYear, currentMonth + 1, 0);
-            const daysInMonth = lastDay.getDate();
-            
-            // Calcular días futuros laborables
-            let diasFuturosLaborables = 0;
-            
-            for (let i = 1; i <= daysInMonth; i++) {
-                const dateStr = `${currentYear}-${currentMonth + 1}-${i}`;
-                const isRestDay = diasDescanso.includes(dateStr);
-                
-                if (!isRestDay && i > hoy.getDate() && 
-                    currentMonth === hoy.getMonth() && currentYear === hoy.getFullYear()) {
-                    diasFuturosLaborables++;
-                }
-            }
-            
-            // Aplicar redistribución automática si hay días futuros
-            if (diasFuturosLaborables > 0) {
-                if (diferencia < 0 && Math.abs(diferencia) > 0.01) {
-                    // Aplicar redistribución por déficit
-                    const deficit = Math.abs(diferencia);
-                    const nuevaMeta = metaDiaria + (deficit / diasFuturosLaborables);
-                    metaDiaria = nuevaMeta;
-                    totalGanarInput.value = nuevaMeta.toFixed(2);
-                    
-                    // Recalcular objetivos
-                    calcularObjetivos();
-                    
-                    // Mostrar notificación
-                    mostrarNotificacion(`Redistribución automática aplicada por déficit. Nueva meta diaria: $${nuevaMeta.toFixed(2)}`, 'warning');
-                } else if (diferencia > 0) {
-                    // Aplicar redistribución por exceso
-                    const exceso = diferencia;
-                    const nuevaMeta = Math.max(metaDiaria * 0.5, metaDiaria - (exceso / diasFuturosLaborables));
-                    metaDiaria = nuevaMeta;
-                    totalGanarInput.value = nuevaMeta.toFixed(2);
-                    
-                    // Recalcular objetivos
-                    calcularObjetivos();
-                    
-                    // Mostrar notificación
-                    mostrarNotificacion(`Redistribución automática aplicada por exceso. Nueva meta diaria: $${nuevaMeta.toFixed(2)}`, 'success');
-                }
-            }
-            
             // Guardar el total del día en el historial de días trabajados
+            const hoy = new Date();
             const dayKey = `${hoy.getDate()}-${hoy.getMonth()}-${hoy.getFullYear()}`;
             
             // Sumar el acumulado actual al día (por si ya existía)
@@ -2130,9 +1632,6 @@
             
             // Actualizar resumen mensual
             actualizarResumenMensualCompleto();
-            
-            // Recalcular redistribución
-            calcularRedistribucion();
             
             // Regenerar el calendario para actualizar los días marcados
             generarCalendario();
@@ -2172,9 +1671,6 @@
                 
                 // Guardar valores
                 guardarValores();
-                
-                // Actualizar redistribución
-                calcularRedistribucion();
             }
         }
         
@@ -2211,9 +1707,6 @@
                 
                 // Guardar valores
                 guardarValores();
-                
-                // Actualizar redistribución
-                calcularRedistribucion();
             }
         }
         
@@ -2327,6 +1820,46 @@
             });
         }
         
+        // Función auxiliar para mostrar notificaciones
+        function mostrarNotificacion(mensaje, tipo) {
+            // Crear elemento de notificación si no existe
+            let notificacion = document.getElementById('notificacionGlobal');
+            if (!notificacion) {
+                notificacion = document.createElement('div');
+                notificacion.id = 'notificacionGlobal';
+                notificacion.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    padding: 15px 20px;
+                    border-radius: 8px;
+                    color: white;
+                    font-weight: bold;
+                    z-index: 1000;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    max-width: 300px;
+                    transition: all 0.3s ease;
+                `;
+                document.body.appendChild(notificacion);
+            }
+            
+            // Configurar colores según el tipo
+            const colores = {
+                success: '#10b981',
+                warning: '#f59e0b',
+                error: '#ef4444'
+            };
+            
+            notificacion.style.backgroundColor = colores[tipo] || colores.success;
+            notificacion.textContent = mensaje;
+            notificacion.style.display = 'block';
+            
+            // Ocultar después de 4 segundos
+            setTimeout(() => {
+                notificacion.style.display = 'none';
+            }, 4000);
+        }
+        
         // Guardar valores en localStorage
         function guardarValores() {
             const datos = {
@@ -2340,8 +1873,7 @@
                 diasDescanso,
                 diasTrabajados,
                 totalGanar: parseFloat(totalGanarInput.value),
-                horasDisponibles: parseFloat(horasDisponiblesInput.value),
-                redistribucionAutomatica
+                horasDisponibles: parseFloat(horasDisponiblesInput.value)
             };
             
             // Guardar por mes y año para tener configuraciones individuales
@@ -2384,11 +1916,6 @@
                 } else {
                     diasTrabajados = {};
                 }
-                
-                // Cargar configuración de redistribución automática
-                if (datos.redistribucionAutomatica !== undefined) {
-                    redistribucionAutomatica = datos.redistribucionAutomatica;
-                }
             } else {
                 // Si no hay datos para este mes, inicializar con valores por defecto
                 viajes = [];
@@ -2396,7 +1923,6 @@
                 saldoAcumulado = 0;
                 diasDescanso = [];
                 diasTrabajados = {};
-                redistribucionAutomatica = true;
                 
                 // Aplicar la meta mensual para calcular días laborables y meta diaria sugerida
                 aplicarMetaMensual();
@@ -2404,9 +1930,6 @@
             
             // Actualizar la UI
             actualizarUI();
-            
-            // Actualizar redistribución después de cargar los valores
-            calcularRedistribucion();
         }
         
         // Inicializar la aplicación cuando se cargue la página
