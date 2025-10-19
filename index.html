@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora Uber Mejorada</title>
+    <title>Calculadora Uber Optimizada</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -582,6 +582,54 @@
             display: none;
         }
 
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            max-width: 300px;
+            transition: all 0.3s ease;
+            transform: translateX(100%);
+            opacity: 0;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .notification-success {
+            background: var(--success);
+        }
+
+        .notification-error {
+            background: var(--danger);
+        }
+
+        .notification-warning {
+            background: var(--warning);
+        }
+
+        .notification-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .notification-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
         @media (max-width: 968px) {
             .app-content {
                 grid-template-columns: 1fr;
@@ -594,6 +642,33 @@
             
             .month-selector {
                 justify-content: center;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            
+            .container {
+                border-radius: 8px;
+            }
+            
+            .panel {
+                padding: 15px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .calendar-day {
+                height: 30px;
+                font-size: 12px;
             }
         }
     </style>
@@ -867,1073 +942,1241 @@
     </div>
 
     <script>
-        // Variables globales
-        let metaDiaria = 136.36;
-        let metaMensual = 3000;
-        let costoPromedio = 40;
-        let tiempoPromedioViaje = 25;
-        let viajes = [];
-        let totalAcumulado = 0;
-        let saldoAcumulado = 0;
-        let diasDescanso = [];
-        let diasTrabajados = {};
-        let currentDate = new Date();
-        let currentMonth = currentDate.getMonth();
-        let currentYear = currentDate.getFullYear();
-        let currentDayKey = `${currentDate.getDate()}-${currentDate.getMonth()}-${currentDate.getFullYear()}`;
-        
-        // Elementos del DOM
-        const totalGanarInput = document.getElementById('totalGanar');
-        const horasDisponiblesInput = document.getElementById('horasDisponibles');
-        const tiempoPromedioViajeInput = document.getElementById('tiempoPromedioViaje');
-        const totalViajesInput = document.getElementById('totalViajes');
-        const costoPromedioInput = document.getElementById('costoPromedio');
-        const viajesPorHoraInput = document.getElementById('viajesPorHora');
-        const montoViajeInput = document.getElementById('montoViaje');
-        const viajesRealizadosElement = document.getElementById('viajesRealizados');
-        const viajesNecesariosElement = document.getElementById('viajesNecesarios');
-        const dineroAcumuladoElement = document.getElementById('dineroAcumulado');
-        const metaDisplayElement = document.getElementById('metaDisplay');
-        const progresoElement = document.getElementById('progreso');
-        const progressTextElement = document.getElementById('progressText');
-        const progressPercentageElement = document.getElementById('progressPercentage');
-        const progressDetailsElement = document.getElementById('progressDetails');
-        const sugerenciaMontoElement = document.getElementById('sugerenciaMonto');
-        const viajesFaltantesElement = document.getElementById('viajesFaltantes');
-        const listaViajesElement = document.getElementById('listaViajes');
-        const saldoAcumuladoElement = document.getElementById('saldoAcumulado');
-        const saldoNotification = document.getElementById('saldoNotification');
-        const saldoMessage = document.getElementById('saldoMessage');
-        const metaMensualInput = document.getElementById('metaMensual');
-        const currentMonthElement = document.getElementById('currentMonth');
-        const calendarDaysElement = document.getElementById('calendarDays');
-        const diasLaborablesElement = document.getElementById('diasLaborables');
-        const diasDescansoElement = document.getElementById('diasDescanso');
-        const metaDiariaSugeridaElement = document.getElementById('metaDiariaSugerida');
-        const btnAplicarMeta = document.getElementById('btnAplicarMeta');
-        const prevMonthButton = document.getElementById('prevMonth');
-        const nextMonthButton = document.getElementById('nextMonth');
-        const diasTrabajadosElement = document.getElementById('diasTrabajados');
-        const metaMensualDisplayElement = document.getElementById('metaMensualDisplay');
-        const acumuladoMesElement = document.getElementById('acumuladoMes');
-        const progresoMensualElement = document.getElementById('progresoMensual');
-        const progresoMensualBarElement = document.getElementById('progresoMensualBar');
-        const progressMensualTextElement = document.getElementById('progressMensualText');
-        const progressMensualPercentageElement = document.getElementById('progressMensualPercentage');
-        const progressMensualDetailsElement = document.getElementById('progressMensualDetails');
-        const listaDiasTrabajadosElement = document.getElementById('listaDiasTrabajados');
-        const btnReiniciarMes = document.getElementById('btnReiniciarMes');
-        const btnFinalizarDia = document.getElementById('btnFinalizarDia');
-        const modalResumenDia = document.getElementById('modalResumenDia');
-        const closeResumenModal = document.getElementById('closeResumenModal');
-        const resumenDiaContent = document.getElementById('resumenDiaContent');
-        const btnConfirmarFinalizar = document.getElementById('btnConfirmarFinalizar');
-        const autoFinishNotification = document.getElementById('autoFinishNotification');
-        const autoFinishMessage = document.getElementById('autoFinishMessage');
-        
-        // Nombres de meses
-        const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-                           "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-        
-        // Inicializar la calculadora
-        function inicializar() {
-            // Cargar valores guardados si existen
-            cargarValoresGuardados();
-            
-            // Configurar eventos
-            configurarEventos();
-            
-            // Inicializar UI
-            actualizarUI();
-            
-            // Configurar verificación periódica
-            setInterval(verificarFinalizacionAutomatica, 60000); // Verificar cada minuto
-        }
-        
-        // Función para actualizar toda la UI
-        function actualizarUI() {
-            calcularObjetivos();
-            actualizarProgreso();
-            actualizarSugerencia();
-            actualizarListaViajes();
-            actualizarEstadisticas();
-            saldoAcumuladoElement.textContent = `$${saldoAcumulado.toFixed(2)}`;
-            actualizarResumenMensualCompleto();
-            generarCalendario();
-        }
-        
-        // Configurar eventos
-        function configurarEventos() {
-            document.getElementById('btnCalcular').addEventListener('click', calcularObjetivos);
-            document.getElementById('btnRegistrar').addEventListener('click', registrarViaje);
-            document.getElementById('btnReiniciar').addEventListener('click', reiniciarDia);
-            btnFinalizarDia.addEventListener('click', mostrarResumenDia);
-            btnAplicarMeta.addEventListener('click', aplicarMetaMensual);
-            prevMonthButton.addEventListener('click', () => cambiarMes(-1));
-            nextMonthButton.addEventListener('click', () => cambiarMes(1));
-            btnReiniciarMes.addEventListener('click', reiniciarMes);
-            closeResumenModal.addEventListener('click', () => modalResumenDia.style.display = 'none');
-            btnConfirmarFinalizar.addEventListener('click', finalizarDia);
-            
-            // Cerrar modal al hacer clic fuera
-            window.addEventListener('click', (e) => {
-                if (e.target === modalResumenDia) {
-                    modalResumenDia.style.display = 'none';
-                }
-            });
-            
-            // Configurar pestañas
-            const tabs = document.querySelectorAll('.tab');
-            tabs.forEach(tab => {
-                tab.addEventListener('click', () => {
-                    // Desactivar todas las pestañas
-                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                    
-                    // Activar la pestaña seleccionada
-                    tab.classList.add('active');
-                    document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
-                    
-                    // Si es la pestaña de mes, actualizar el resumen
-                    if (tab.dataset.tab === 'mes') {
-                        actualizarResumenMensualCompleto();
-                    }
-                });
-            });
+        // Clase principal optimizada para la calculadora Uber
+        class UberCalculator {
+            constructor() {
+                this.metaDiaria = 136.36;
+                this.metaMensual = 3000;
+                this.costoPromedio = 40;
+                this.tiempoPromedioViaje = 25;
+                this.viajes = [];
+                this.totalAcumulado = 0;
+                this.saldoAcumulado = 0;
+                this.diasDescanso = [];
+                this.diasTrabajados = {};
+                this.currentDate = new Date();
+                this.currentMonth = this.currentDate.getMonth();
+                this.currentYear = this.currentDate.getFullYear();
+                this.currentDayKey = this.getDayKey(this.currentDate);
+                
+                // Optimizaciones de rendimiento
+                this.debounceTimers = {};
+                this.calculationCache = new Map();
+                this.performanceMarks = new Map();
+                
+                // Nombres de meses
+                this.monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                                 "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+                
+                this.init();
+            }
 
-            // Configurar eventos de entrada para calcular automáticamente
-            totalGanarInput.addEventListener('change', calcularObjetivos);
-            horasDisponiblesInput.addEventListener('change', calcularObjetivos);
-            tiempoPromedioViajeInput.addEventListener('change', calcularObjetivos);
-        }
-        
-        // Nueva función: Verificar finalización automática
-        function verificarFinalizacionAutomatica() {
-            const ahora = new Date();
-            const horaActual = ahora.getHours();
-            const minutosActual = ahora.getMinutes();
-            const diaActual = ahora.getDate();
-            const mesActual = ahora.getMonth();
-            const añoActual = ahora.getFullYear();
-            const diaKeyActual = `${diaActual}-${mesActual}-${añoActual}`;
-            
-            // Verificar si es después de las 10 PM (22:00) y hay viajes registrados hoy
-            // y el día actual no ha sido guardado en diasTrabajados
-            if ((horaActual > 22 || (horaActual === 22 && minutosActual >= 0)) && 
-                viajes.length > 0 && 
-                !diasTrabajados[diaKeyActual]) {
+            // Inicialización optimizada
+            init() {
+                this.startPerformanceMark('init');
+                this.cacheDOM();
+                this.bindEvents();
+                this.loadSavedValues();
+                this.updateUI();
+                this.setupPerformanceMonitoring();
+                this.endPerformanceMark('init');
                 
-                // Mostrar notificación
-                autoFinishMessage.textContent = "Finalizando día automáticamente...";
-                autoFinishNotification.style.display = 'block';
-                
-                // Esperar 3 segundos para que el usuario vea la notificación
-                setTimeout(() => {
-                    finalizarDiaAutomaticamente();
-                }, 3000);
+                // Configurar verificación periódica
+                setInterval(() => this.verificarFinalizacionAutomatica(), 60000);
             }
-        }
-        
-        // Nueva función: Finalizar día automáticamente
-        function finalizarDiaAutomaticamente() {
-            const hoy = new Date();
-            const dayKey = `${hoy.getDate()}-${hoy.getMonth()}-${hoy.getFullYear()}`;
-            
-            // Guardar el total del día en el historial de días trabajados
-            diasTrabajados[dayKey] = (diasTrabajados[dayKey] || 0) + totalAcumulado;
-            
-            // Reiniciar contadores del día
-            viajes = [];
-            totalAcumulado = 0;
-            saldoAcumulado = 0;
-            
-            // Ocultar notificaciones
-            saldoNotification.style.display = 'none';
-            
-            // Actualizar la UI
-            actualizarProgreso();
-            actualizarSugerencia();
-            actualizarListaViajes();
-            actualizarEstadisticas();
-            saldoAcumuladoElement.textContent = `$${saldoAcumulado.toFixed(2)}`;
-            
-            // Actualizar resumen mensual
-            actualizarResumenMensualCompleto();
-            
-            // Regenerar el calendario para actualizar los días marcados
-            generarCalendario();
-            
-            // Guardar valores
-            guardarValores();
-            
-            // Actualizar notificación
-            autoFinishMessage.textContent = "Día finalizado automáticamente.";
-            
-            // Ocultar notificación después de 5 segundos
-            setTimeout(() => {
-                autoFinishNotification.style.display = 'none';
-            }, 5000);
-        }
-        
-        // Función para verificar si un día es pasado
-        function esDiaPasado(year, month, day) {
-            const today = new Date();
-            const fecha = new Date(year, month, day);
-            const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-            return fecha < todayStart;
-        }
-        
-        // Generar calendario
-        function generarCalendario() {
-            // Actualizar el encabezado del mes
-            currentMonthElement.textContent = `${monthNames[currentMonth]} ${currentYear}`;
-            
-            // Obtener el primer día del mes y la cantidad de días
-            const firstDay = new Date(currentYear, currentMonth, 1);
-            const lastDay = new Date(currentYear, currentMonth + 1, 0);
-            const daysInMonth = lastDay.getDate();
-            
-            // Obtener el día de la semana del primer día (0 = Domingo, 1 = Lunes, etc.)
-            const startingDay = firstDay.getDay();
-            
-            // Limpiar el calendario
-            calendarDaysElement.innerHTML = '';
-            
-            // Agregar días vacíos para alinear el primer día
-            for (let i = 0; i < startingDay; i++) {
-                const emptyDay = document.createElement('div');
-                emptyDay.className = 'calendar-day other-month';
-                calendarDaysElement.appendChild(emptyDay);
+
+            // Cache de elementos DOM para mejor performance
+            cacheDOM() {
+                this.dom = {
+                    totalGanarInput: document.getElementById('totalGanar'),
+                    horasDisponiblesInput: document.getElementById('horasDisponibles'),
+                    tiempoPromedioViajeInput: document.getElementById('tiempoPromedioViaje'),
+                    totalViajesInput: document.getElementById('totalViajes'),
+                    costoPromedioInput: document.getElementById('costoPromedio'),
+                    viajesPorHoraInput: document.getElementById('viajesPorHora'),
+                    montoViajeInput: document.getElementById('montoViaje'),
+                    viajesRealizadosElement: document.getElementById('viajesRealizados'),
+                    viajesNecesariosElement: document.getElementById('viajesNecesarios'),
+                    dineroAcumuladoElement: document.getElementById('dineroAcumulado'),
+                    metaDisplayElement: document.getElementById('metaDisplay'),
+                    progresoElement: document.getElementById('progreso'),
+                    progressTextElement: document.getElementById('progressText'),
+                    progressPercentageElement: document.getElementById('progressPercentage'),
+                    progressDetailsElement: document.getElementById('progressDetails'),
+                    sugerenciaMontoElement: document.getElementById('sugerenciaMonto'),
+                    viajesFaltantesElement: document.getElementById('viajesFaltantes'),
+                    listaViajesElement: document.getElementById('listaViajes'),
+                    saldoAcumuladoElement: document.getElementById('saldoAcumulado'),
+                    saldoNotification: document.getElementById('saldoNotification'),
+                    saldoMessage: document.getElementById('saldoMessage'),
+                    metaMensualInput: document.getElementById('metaMensual'),
+                    currentMonthElement: document.getElementById('currentMonth'),
+                    calendarDaysElement: document.getElementById('calendarDays'),
+                    diasLaborablesElement: document.getElementById('diasLaborables'),
+                    diasDescansoElement: document.getElementById('diasDescanso'),
+                    metaDiariaSugeridaElement: document.getElementById('metaDiariaSugerida'),
+                    btnAplicarMeta: document.getElementById('btnAplicarMeta'),
+                    prevMonthButton: document.getElementById('prevMonth'),
+                    nextMonthButton: document.getElementById('nextMonth'),
+                    diasTrabajadosElement: document.getElementById('diasTrabajados'),
+                    metaMensualDisplayElement: document.getElementById('metaMensualDisplay'),
+                    acumuladoMesElement: document.getElementById('acumuladoMes'),
+                    progresoMensualElement: document.getElementById('progresoMensual'),
+                    progresoMensualBarElement: document.getElementById('progresoMensualBar'),
+                    progressMensualTextElement: document.getElementById('progressMensualText'),
+                    progressMensualPercentageElement: document.getElementById('progressMensualPercentage'),
+                    progressMensualDetailsElement: document.getElementById('progressMensualDetails'),
+                    listaDiasTrabajadosElement: document.getElementById('listaDiasTrabajados'),
+                    btnReiniciarMes: document.getElementById('btnReiniciarMes'),
+                    btnFinalizarDia: document.getElementById('btnFinalizarDia'),
+                    modalResumenDia: document.getElementById('modalResumenDia'),
+                    closeResumenModal: document.getElementById('closeResumenModal'),
+                    resumenDiaContent: document.getElementById('resumenDiaContent'),
+                    btnConfirmarFinalizar: document.getElementById('btnConfirmarFinalizar'),
+                    autoFinishNotification: document.getElementById('autoFinishNotification'),
+                    autoFinishMessage: document.getElementById('autoFinishMessage'),
+                    btnCalcular: document.getElementById('btnCalcular'),
+                    btnRegistrar: document.getElementById('btnRegistrar'),
+                    btnReiniciar: document.getElementById('btnReiniciar')
+                };
             }
-            
-            // Agregar los días del mes
-            const today = new Date();
-            for (let i = 1; i <= daysInMonth; i++) {
-                const day = document.createElement('div');
-                day.className = 'calendar-day workday';
-                day.textContent = i;
+
+            // Configuración de eventos optimizada
+            bindEvents() {
+                // Debouncing para inputs que disparan cálculos
+                this.setupDebouncedEvent(this.dom.totalGanarInput, 'change', () => this.calcularObjetivos(), 300);
+                this.setupDebouncedEvent(this.dom.horasDisponiblesInput, 'change', () => this.calcularObjetivos(), 300);
+                this.setupDebouncedEvent(this.dom.tiempoPromedioViajeInput, 'change', () => this.calcularObjetivos(), 300);
                 
-                // Comprobar si es día pasado
-                if (esDiaPasado(currentYear, currentMonth, i)) {
-                    day.classList.add('past-day');
-                }
+                // Eventos directos
+                this.dom.btnCalcular.addEventListener('click', () => this.calcularObjetivos());
+                this.dom.btnRegistrar.addEventListener('click', () => this.registrarViaje());
+                this.dom.btnReiniciar.addEventListener('click', () => this.reiniciarDia());
+                this.dom.btnFinalizarDia.addEventListener('click', () => this.mostrarResumenDia());
+                this.dom.btnAplicarMeta.addEventListener('click', () => this.aplicarMetaMensual());
+                this.dom.prevMonthButton.addEventListener('click', () => this.cambiarMes(-1));
+                this.dom.nextMonthButton.addEventListener('click', () => this.cambiarMes(1));
+                this.dom.btnReiniciarMes.addEventListener('click', () => this.reiniciarMes());
+                this.dom.closeResumenModal.addEventListener('click', () => this.dom.modalResumenDia.style.display = 'none');
+                this.dom.btnConfirmarFinalizar.addEventListener('click', () => this.finalizarDia());
                 
-                // Comprobar si es hoy
-                if (currentYear === today.getFullYear() && currentMonth === today.getMonth() && i === today.getDate()) {
-                    day.classList.add('today');
-                }
-                
-                // Comprobar si es día de descanso
-                const dateStr = `${currentYear}-${currentMonth + 1}-${i}`;
-                if (diasDescanso.includes(dateStr)) {
-                    day.classList.add('restday');
-                }
-                
-                // Comprobar si es día trabajado
-                const dayKey = `${i}-${currentMonth}-${currentYear}`;
-                if (diasTrabajados[dayKey]) {
-                    // Verificar si se alcanzó la meta ese día
-                    const metaDiariaEsperada = metaMensual / (daysInMonth - diasDescanso.length);
-                    if (diasTrabajados[dayKey] >= metaDiariaEsperada * 0.95) {
-                        day.classList.add('meta-alcanzada');
-                        day.innerHTML = `${i} <span class="day-status">✓</span>`;
-                    } else {
-                        day.classList.add('meta-no-alcanzada');
-                        day.innerHTML = `${i} <span class="day-status">✗</span>`;
+                // Cerrar modal al hacer clic fuera
+                window.addEventListener('click', (e) => {
+                    if (e.target === this.dom.modalResumenDia) {
+                        this.dom.modalResumenDia.style.display = 'none';
                     }
-                    day.title = `Ganado: $${diasTrabajados[dayKey].toFixed(2)}`;
-                }
-                
-                // Evento click para marcar/desmarcar como día de descanso
-                day.addEventListener('click', () => {
-                    toggleDiaDescanso(dateStr, day);
                 });
                 
-                calendarDaysElement.appendChild(day);
+                // Configurar pestañas con event delegation
+                document.querySelector('.tabs').addEventListener('click', (e) => {
+                    if (e.target.classList.contains('tab')) {
+                        this.handleTabChange(e.target.dataset.tab);
+                    }
+                });
+
+                // Event delegation para calendario
+                this.dom.calendarDaysElement.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('calendar-day') && !e.target.classList.contains('other-month')) {
+                        this.handleCalendarClick(e.target);
+                    }
+                });
             }
-            
-            // Actualizar resumen mensual después de generar el calendario
-            actualizarResumenMensual();
-        }
-        
-        // Cambiar entre meses
-        function cambiarMes(direction) {
-            // Guardar configuración del mes actual antes de cambiar
-            guardarValores();
-            
-            currentMonth += direction;
-            
-            // Ajustar año si es necesario
-            if (currentMonth < 0) {
-                currentMonth = 11;
-                currentYear--;
-            } else if (currentMonth > 11) {
-                currentMonth = 0;
-                currentYear++;
+
+            // Debouncing optimizado
+            setupDebouncedEvent(element, event, callback, delay) {
+                let timer;
+                element.addEventListener(event, () => {
+                    clearTimeout(timer);
+                    timer = setTimeout(callback, delay);
+                });
             }
-            
-            // Cargar configuración del nuevo mes
-            cargarValoresGuardados();
-            
-            // Regenerar el calendario
-            generarCalendario();
-        }
-        
-        // Alternar día de descanso
-        function toggleDiaDescanso(dateStr, dayElement) {
-            const index = diasDescanso.indexOf(dateStr);
-            
-            if (index === -1) {
-                // Agregar como día de descanso
-                diasDescanso.push(dateStr);
-                dayElement.classList.add('restday');
-            } else {
-                // Quitar como día de descanso
-                diasDescanso.splice(index, 1);
-                dayElement.classList.remove('restday');
+
+            // Manejo de pestañas optimizado
+            handleTabChange(tabId) {
+                // Desactivar todas las pestañas
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                // Activar la pestaña seleccionada
+                document.querySelector(`.tab[data-tab="${tabId}"]`).classList.add('active');
+                document.getElementById(`tab-${tabId}`).classlist.add('active');
+                
+                // Si es la pestaña de mes, actualizar el resumen
+                if (tabId === 'mes') {
+                    this.actualizarResumenMensualCompleto();
+                }
             }
-            
-            actualizarResumenMensual();
-            guardarValores();
-        }
-        
-        // Actualizar resumen mensual
-        function actualizarResumenMensual() {
-            // Obtener la cantidad de días en el mes
-            const lastDay = new Date(currentYear, currentMonth + 1, 0);
-            const daysInMonth = lastDay.getDate();
-            
-            // Calcular días laborables (todos los días menos los de descanso)
-            const diasLaborables = daysInMonth - diasDescanso.length;
-            
-            // Calcular meta diaria sugerida
-            const metaDiariaSugerida = metaMensual / diasLaborables;
-            
-            // Actualizar la UI
-            diasLaborablesElement.textContent = diasLaborables;
-            diasDescansoElement.textContent = diasDescanso.length;
-            metaDiariaSugeridaElement.textContent = `$${metaDiariaSugerida.toFixed(2)}`;
-        }
-        
-        // Actualizar resumen mensual completo
-        function actualizarResumenMensualCompleto() {
-            // Calcular el acumulado del mes
-            let acumuladoMes = 0;
-            let diasConTrabajo = 0;
-            
-            for (const dayKey in diasTrabajados) {
-                if (dayKey.endsWith(`-${currentMonth}-${currentYear}`)) {
-                    acumuladoMes += diasTrabajados[dayKey];
-                    diasConTrabajo++;
+
+            // Manejo de clics en calendario optimizado
+            handleCalendarClick(dayElement) {
+                const dayNumber = parseInt(dayElement.textContent);
+                if (isNaN(dayNumber)) return;
+                
+                const dateStr = `${this.currentYear}-${this.currentMonth + 1}-${dayNumber}`;
+                this.toggleDiaDescanso(dateStr, dayElement);
+            }
+
+            // Función para actualizar toda la UI de forma optimizada
+            updateUI() {
+                this.startPerformanceMark('updateUI');
+                this.calcularObjetivos();
+                this.actualizarProgreso();
+                this.actualizarSugerencia();
+                this.actualizarListaViajes();
+                this.actualizarEstadisticas();
+                this.dom.saldoAcumuladoElement.textContent = `$${this.saldoAcumulado.toFixed(2)}`;
+                this.actualizarResumenMensualCompleto();
+                this.generarCalendario();
+                this.endPerformanceMark('updateUI');
+            }
+
+            // Nueva función: Verificar finalización automática
+            verificarFinalizacionAutomatica() {
+                const ahora = new Date();
+                const horaActual = ahora.getHours();
+                const minutosActual = ahora.getMinutes();
+                const diaActual = ahora.getDate();
+                const mesActual = ahora.getMonth();
+                const añoActual = ahora.getFullYear();
+                const diaKeyActual = `${diaActual}-${mesActual}-${añoActual}`;
+                
+                // Verificar si es después de las 10 PM (22:00) y hay viajes registrados hoy
+                // y el día actual no ha sido guardado en diasTrabajados
+                if ((horaActual > 22 || (horaActual === 22 && minutosActual >= 0)) && 
+                    this.viajes.length > 0 && 
+                    !this.diasTrabajados[diaKeyActual]) {
+                    
+                    // Mostrar notificación
+                    this.dom.autoFinishMessage.textContent = "Finalizando día automáticamente...";
+                    this.dom.autoFinishNotification.style.display = 'block';
+                    
+                    // Esperar 3 segundos para que el usuario vea la notificación
+                    setTimeout(() => {
+                        this.finalizarDiaAutomaticamente();
+                    }, 3000);
                 }
             }
             
-            // Calcular el progreso mensual
-            const progresoMensual = Math.min(100, (acumuladoMes / metaMensual) * 100);
-            
-            // Actualizar la UI
-            diasTrabajadosElement.textContent = diasConTrabajo;
-            metaMensualDisplayElement.textContent = `$${metaMensual.toFixed(2)}`;
-            acumuladoMesElement.textContent = `$${acumuladoMes.toFixed(2)}`;
-            progresoMensualElement.textContent = `${progresoMensual.toFixed(1)}%`;
-            
-            // Actualizar barra de progreso mensual
-            progresoMensualBarElement.style.width = `${progresoMensual}%`;
-            progressMensualTextElement.textContent = `${progresoMensual.toFixed(1)}%`;
-            progressMensualPercentageElement.textContent = `${progresoMensual.toFixed(1)}%`;
-            progressMensualDetailsElement.textContent = `$${acumuladoMes.toFixed(2)} de $${metaMensual.toFixed(2)}`;
-            
-            // Cambiar color según el progreso
-            if (progresoMensual >= 100) {
-                progresoMensualBarElement.style.background = 'linear-gradient(90deg, var(--success), #16a34a)';
-            } else if (progresoMensual >= 70) {
-                progresoMensualBarElement.style.background = 'linear-gradient(90deg, var(--warning), #ea580c)';
-            } else {
-                progresoMensualBarElement.style.background = 'linear-gradient(90deg, var(--primary), var(--secondary))';
-            }
-            
-            // Actualizar lista de días trabajados
-            actualizarListaDiasTrabajados();
-        }
-        
-        // Actualizar lista de días trabajados
-        function actualizarListaDiasTrabajados() {
-            listaDiasTrabajadosElement.innerHTML = '';
-            
-            const diasDelMes = [];
-            for (const dayKey in diasTrabajados) {
-                if (dayKey.endsWith(`-${currentMonth}-${currentYear}`)) {
-                    diasDelMes.push({
-                        key: dayKey,
-                        monto: diasTrabajados[dayKey]
-                    });
-                }
-            }
-            
-            if (diasDelMes.length === 0) {
-                listaDiasTrabajadosElement.innerHTML = `
-                    <div style="text-align: center; color: var(--gray); padding: 20px;">
-                        <i class="fas fa-calendar" style="font-size: 40px; margin-bottom: 10px;"></i>
-                        <p>No hay días trabajados este mes</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            // Ordenar días por fecha (más recientes primero)
-            diasDelMes.sort((a, b) => {
-                const [dayA, monthA, yearA] = a.key.split('-').map(Number);
-                const [dayB, monthB, yearB] = b.key.split('-').map(Number);
-                const dateA = new Date(yearA, monthA, dayA);
-                const dateB = new Date(yearB, monthB, dayB);
-                return dateB - dateA;
-            });
-            
-            diasDelMes.forEach(dia => {
-                const [day, month, year] = dia.key.split('-').map(Number);
-                const fecha = new Date(year, month, day);
-                const diaElement = document.createElement('div');
-                diaElement.className = 'trip-item';
+            // Nueva función: Finalizar día automáticamente
+            finalizarDiaAutomaticamente() {
+                const hoy = new Date();
+                const dayKey = `${hoy.getDate()}-${hoy.getMonth()}-${hoy.getFullYear()}`;
                 
-                // Verificar si se alcanzó la meta
-                const metaDiariaEsperada = metaMensual / (new Date(year, month + 1, 0).getDate() - diasDescanso.length);
-                const alcanzada = dia.monto >= metaDiariaEsperada * 0.95;
+                // Guardar el total del día en el historial de días trabajados
+                this.diasTrabajados[dayKey] = (this.diasTrabajados[dayKey] || 0) + this.totalAcumulado;
                 
-                diaElement.innerHTML = `
-                    <div class="trip-info">
-                        <span class="trip-number">${day} de ${monthNames[month]} ${year}</span>
-                        <span class="trip-time">${fecha.toLocaleDateString('es-ES', { weekday: 'long' })}</span>
-                    </div>
-                    <span class="trip-amount" style="color: ${alcanzada ? 'var(--success)' : 'var(--danger)'}">
-                        $${dia.monto.toFixed(2)} ${alcanzada ? '✓' : '✗'}
-                    </span>
-                `;
-                listaDiasTrabajadosElement.appendChild(diaElement);
-            });
-        }
-        
-        // Aplicar meta mensual
-        function aplicarMetaMensual() {
-            metaMensual = parseFloat(metaMensualInput.value) || 3000;
-            actualizarResumenMensual();
-            
-            // Obtener la meta diaria sugerida
-            const metaDiariaSugerida = parseFloat(metaDiariaSugeridaElement.textContent.replace('$', '').replace(',', ''));
-            
-            // Actualizar la meta diaria
-            metaDiaria = metaDiariaSugerida;
-            totalGanarInput.value = metaDiariaSugerida.toFixed(2);
-            
-            // Recalcular objetivos
-            calcularObjetivos();
-            
-            // Actualizar resumen mensual completo
-            actualizarResumenMensualCompleto();
-            
-            // Guardar valores
-            guardarValores();
-        }
-        
-        // Calcular objetivos basados en la configuración
-        function calcularObjetivos() {
-            metaDiaria = parseFloat(totalGanarInput.value) || 136.36;
-            const horasDisponibles = parseFloat(horasDisponiblesInput.value) || 8;
-            tiempoPromedioViaje = parseFloat(tiempoPromedioViajeInput.value) || 25;
-            
-            // Calcular viajes por hora
-            const viajesPorHora = 60 / tiempoPromedioViaje;
-            
-            // Calcular viajes necesarios basados en tiempo disponible
-            const viajesNecesarios = Math.ceil(horasDisponibles * viajesPorHora);
-            
-            // Calcular costo promedio por viaje
-            costoPromedio = metaDiaria / viajesNecesarios;
-            
-            // Actualizar los campos de solo lectura
-            totalViajesInput.value = viajesNecesarios;
-            costoPromedioInput.value = `$${costoPromedio.toFixed(2)}`;
-            viajesPorHoraInput.value = viajesPorHora.toFixed(1);
-            
-            // Actualizar la UI
-            viajesNecesariosElement.textContent = viajesNecesarios;
-            metaDisplayElement.textContent = `$${metaDiaria.toFixed(2)}`;
-            
-            // Actualizar sugerencia para el próximo viaje
-            actualizarSugerencia();
-            actualizarEstadisticas();
-            actualizarProgreso();
-            
-            // Guardar valores
-            guardarValores();
-        }
-        
-        // Registrar un nuevo viaje
-        function registrarViaje() {
-            const monto = parseFloat(montoViajeInput.value);
-            
-            if (!monto || monto <= 0) {
-                mostrarNotificacion('Por favor ingresa un monto válido para el viaje.', 'error');
-                return;
-            }
-            
-            // Obtener el rango sugerido para el próximo viaje
-            const sugerenciaText = sugerenciaMontoElement.textContent;
-            const sugerenciaMatch = sugerenciaText.match(/\$([0-9.]+) - \$([0-9.]+)/);
-            
-            let minSugerido = 0;
-            let maxSugerido = 0;
-            
-            if (sugerenciaMatch && sugerenciaMatch.length >= 3) {
-                minSugerido = parseFloat(sugerenciaMatch[1]);
-                maxSugerido = parseFloat(sugerenciaMatch[2]);
-            }
-            
-            // Si el monto está por debajo del mínimo sugerido, agregar al saldo Y al total acumulado
-            if (minSugerido > 0 && monto < minSugerido) {
-                saldoAcumulado += monto;
-                totalAcumulado += monto;
-                saldoAcumuladoElement.textContent = `$${saldoAcumulado.toFixed(2)}`;
+                // Reiniciar contadores del día
+                this.viajes = [];
+                this.totalAcumulado = 0;
+                this.saldoAcumulado = 0;
                 
-                // Mostrar notificación de saldo generado
-                saldoMessage.textContent = `¡Has agregado $${monto.toFixed(2)} al saldo! Saldo total: $${saldoAcumulado.toFixed(2)}`;
-                saldoNotification.style.display = 'block';
-                
-                // Ocultar la notificación después de 5 segundos
-                setTimeout(() => {
-                    saldoNotification.style.display = 'none';
-                }, 5000);
+                // Ocultar notificaciones
+                this.dom.saldoNotification.style.display = 'none';
                 
                 // Actualizar la UI
-                actualizarProgreso();
-                actualizarEstadisticas();
+                this.actualizarProgreso();
+                this.actualizarSugerencia();
+                this.actualizarListaViajes();
+                this.actualizarEstadisticas();
+                this.dom.saldoAcumuladoElement.textContent = `$${this.saldoAcumulado.toFixed(2)}`;
                 
-                // Limpiar el campo
-                montoViajeInput.value = '';
+                // Actualizar resumen mensual
+                this.actualizarResumenMensualCompleto();
+                
+                // Regenerar el calendario para actualizar los días marcados
+                this.generarCalendario();
                 
                 // Guardar valores
-                guardarValores();
+                this.guardarValores();
                 
-                return;
-            }
-            
-            // Calcular cuántos viajes equivalentes representa este monto
-            let viajesEquivalentes = 1;
-            let resto = 0;
-            
-            // Si el monto es mayor al máximo sugerido, contar como múltiples viajes
-            if (maxSugerido > 0 && monto > maxSugerido) {
-                viajesEquivalentes = Math.floor(monto / costoPromedio);
-                resto = monto % costoPromedio;
-            } else {
-                // Para montos dentro del rango, calcular el resto
-                resto = monto - costoPromedio;
-                if (resto < 0) resto = 0;
-            }
-            
-            // Agregar el resto al saldo si existe
-            if (resto > 0) {
-                saldoAcumulado += resto;
-                saldoAcumuladoElement.textContent = `$${saldoAcumulado.toFixed(2)}`;
+                // Actualizar notificación
+                this.dom.autoFinishMessage.textContent = "Día finalizado automáticamente.";
                 
-                // Mostrar notificación de saldo generado
-                saldoMessage.textContent = `¡Has generado $${resto.toFixed(2)} de saldo! Saldo total: $${saldoAcumulado.toFixed(2)}`;
-                saldoNotification.style.display = 'block';
-                
-                // Ocultar la notificación después de 5 segundos
+                // Ocultar notificación después de 5 segundos
                 setTimeout(() => {
-                    saldoNotification.style.display = 'none';
+                    this.dom.autoFinishNotification.style.display = 'none';
                 }, 5000);
             }
             
-            // Agregar el viaje con la información del multiplicador
-            const ahora = new Date();
-            viajes.push({
-                monto: monto,
-                hora: ahora.toLocaleTimeString(),
-                timestamp: ahora.getTime(),
-                multiplicador: viajesEquivalentes,
-                tipo: 'normal'
-            });
+            // Función para verificar si un día es pasado
+            esDiaPasado(year, month, day) {
+                const today = new Date();
+                const fecha = new Date(year, month, day);
+                const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                return fecha < todayStart;
+            }
             
-            totalAcumulado += monto;
-            
-            // Actualizar la UI
-            actualizarProgreso();
-            actualizarSugerencia();
-            actualizarListaViajes();
-            actualizarEstadisticas();
-            
-            // Verificar y usar saldo automáticamente si es suficiente
-            verificarYUsarSaldoAutomaticamente();
-            
-            // Limpiar el campo
-            montoViajeInput.value = '';
-            
-            // Guardar valores
-            guardarValores();
-        }
-        
-        // Verificar y usar saldo automáticamente
-        function verificarYUsarSaldoAutomaticamente() {
-            // Verificar si hay suficiente saldo para al menos un viaje
-            while (saldoAcumulado >= costoPromedio) {
-                // Usar el saldo para un viaje
-                saldoAcumulado -= costoPromedio;
-                saldoAcumuladoElement.textContent = `$${saldoAcumulado.toFixed(2)}`;
+            // Generar calendario optimizado con DocumentFragment
+            generarCalendario() {
+                this.startPerformanceMark('generarCalendario');
                 
-                // Registrar un viaje con saldo (pero NO sumar al totalAcumulado)
-                const ahora = new Date();
-                viajes.push({
-                    monto: 0,
-                    hora: ahora.toLocaleTimeString(),
-                    timestamp: ahora.getTime(),
-                    multiplicador: 1,
-                    tipo: 'saldo'
-                });
+                // Actualizar el encabezado del mes
+                this.dom.currentMonthElement.textContent = `${this.monthNames[this.currentMonth]} ${this.currentYear}`;
                 
-                // Mostrar notificación
-                saldoMessage.textContent = `¡Viaje generado automáticamente con saldo! Saldo restante: $${saldoAcumulado.toFixed(2)}`;
-                saldoNotification.style.display = 'block';
+                // Obtener el primer día del mes y la cantidad de días
+                const firstDay = new Date(this.currentYear, this.currentMonth, 1);
+                const lastDay = new Date(this.currentYear, this.currentMonth + 1, 0);
+                const daysInMonth = lastDay.getDate();
                 
-                // Ocultar la notificación después de 5 segundos
-                setTimeout(() => {
-                    saldoNotification.style.display = 'none';
-                }, 5000);
+                // Obtener el día de la semana del primer día (0 = Domingo, 1 = Lunes, etc.)
+                const startingDay = firstDay.getDay();
+                
+                // Usar DocumentFragment para minimizar reflows
+                const fragment = document.createDocumentFragment();
+                
+                // Agregar días vacíos para alinear el primer día
+                for (let i = 0; i < startingDay; i++) {
+                    const emptyDay = document.createElement('div');
+                    emptyDay.className = 'calendar-day other-month';
+                    fragment.appendChild(emptyDay);
+                }
+                
+                // Agregar los días del mes
+                const today = new Date();
+                for (let i = 1; i <= daysInMonth; i++) {
+                    const day = document.createElement('div');
+                    day.className = 'calendar-day workday';
+                    day.textContent = i;
+                    
+                    // Comprobar si es día pasado
+                    if (this.esDiaPasado(this.currentYear, this.currentMonth, i)) {
+                        day.classList.add('past-day');
+                    }
+                    
+                    // Comprobar si es hoy
+                    if (this.currentYear === today.getFullYear() && this.currentMonth === today.getMonth() && i === today.getDate()) {
+                        day.classList.add('today');
+                    }
+                    
+                    // Comprobar si es día de descanso
+                    const dateStr = `${this.currentYear}-${this.currentMonth + 1}-${i}`;
+                    if (this.diasDescanso.includes(dateStr)) {
+                        day.classList.add('restday');
+                    }
+                    
+                    // Comprobar si es día trabajado
+                    const dayKey = `${i}-${this.currentMonth}-${this.currentYear}`;
+                    if (this.diasTrabajados[dayKey]) {
+                        // Verificar si se alcanzó la meta ese día
+                        const metaDiariaEsperada = this.metaMensual / (daysInMonth - this.diasDescanso.length);
+                        if (this.diasTrabajados[dayKey] >= metaDiariaEsperada * 0.95) {
+                            day.classList.add('meta-alcanzada');
+                            day.innerHTML = `${i} <span class="day-status">✓</span>`;
+                        } else {
+                            day.classList.add('meta-no-alcanzada');
+                            day.innerHTML = `${i} <span class="day-status">✗</span>`;
+                        }
+                        day.title = `Ganado: $${this.diasTrabajados[dayKey].toFixed(2)}`;
+                    }
+                    
+                    fragment.appendChild(day);
+                }
+                
+                // Actualizar de una sola vez
+                this.dom.calendarDaysElement.innerHTML = '';
+                this.dom.calendarDaysElement.appendChild(fragment);
+                
+                // Actualizar resumen mensual después de generar el calendario
+                this.actualizarResumenMensual();
+                this.endPerformanceMark('generarCalendario');
+            }
+            
+            // Cambiar entre meses
+            cambiarMes(direction) {
+                // Guardar configuración del mes actual antes de cambiar
+                this.guardarValores();
+                
+                this.currentMonth += direction;
+                
+                // Ajustar año si es necesario
+                if (this.currentMonth < 0) {
+                    this.currentMonth = 11;
+                    this.currentYear--;
+                } else if (this.currentMonth > 11) {
+                    this.currentMonth = 0;
+                    this.currentYear++;
+                }
+                
+                // Cargar configuración del nuevo mes
+                this.cargarValoresGuardados();
+                
+                // Regenerar el calendario
+                this.generarCalendario();
+            }
+            
+            // Alternar día de descanso
+            toggleDiaDescanso(dateStr, dayElement) {
+                const index = this.diasDescanso.indexOf(dateStr);
+                
+                if (index === -1) {
+                    // Agregar como día de descanso
+                    this.diasDescanso.push(dateStr);
+                    dayElement.classList.add('restday');
+                } else {
+                    // Quitar como día de descanso
+                    this.diasDescanso.splice(index, 1);
+                    dayElement.classList.remove('restday');
+                }
+                
+                this.actualizarResumenMensual();
+                this.guardarValores();
+            }
+            
+            // Actualizar resumen mensual
+            actualizarResumenMensual() {
+                // Obtener la cantidad de días en el mes
+                const lastDay = new Date(this.currentYear, this.currentMonth + 1, 0);
+                const daysInMonth = lastDay.getDate();
+                
+                // Calcular días laborables (todos los días menos los de descanso)
+                const diasLaborables = daysInMonth - this.diasDescanso.length;
+                
+                // Calcular meta diaria sugerida
+                const metaDiariaSugerida = this.metaMensual / diasLaborables;
                 
                 // Actualizar la UI
-                actualizarProgreso();
-                actualizarSugerencia();
-                actualizarListaViajes();
-                actualizarEstadisticas();
+                this.dom.diasLaborablesElement.textContent = diasLaborables;
+                this.dom.diasDescansoElement.textContent = this.diasDescanso.length;
+                this.dom.metaDiariaSugeridaElement.textContent = `$${metaDiariaSugerida.toFixed(2)}`;
             }
             
-            // Guardar valores
-            guardarValores();
-        }
-        
-        // Mostrar resumen del día antes de finalizar
-        function mostrarResumenDia() {
-            // Calcular estadísticas del día
-            const viajesRealizados = viajes.reduce((total, viaje) => total + (viaje.multiplicador || 0), 0);
-            const totalGanado = totalAcumulado;
-            const metaAlcanzada = totalGanado >= metaDiaria * 0.95;
-            const diferencia = totalGanado - metaDiaria;
+            // Actualizar resumen mensual completo
+            actualizarResumenMensualCompleto() {
+                // Calcular el acumulado del mes
+                let acumuladoMes = 0;
+                let diasConTrabajo = 0;
+                
+                for (const dayKey in this.diasTrabajados) {
+                    if (dayKey.endsWith(`-${this.currentMonth}-${this.currentYear}`)) {
+                        acumuladoMes += this.diasTrabajados[dayKey];
+                        diasConTrabajo++;
+                    }
+                }
+                
+                // Calcular el progreso mensual
+                const progresoMensual = Math.min(100, (acumuladoMes / this.metaMensual) * 100);
+                
+                // Actualizar la UI
+                this.dom.diasTrabajadosElement.textContent = diasConTrabajo;
+                this.dom.metaMensualDisplayElement.textContent = `$${this.metaMensual.toFixed(2)}`;
+                this.dom.acumuladoMesElement.textContent = `$${acumuladoMes.toFixed(2)}`;
+                this.dom.progresoMensualElement.textContent = `${progresoMensual.toFixed(1)}%`;
+                
+                // Actualizar barra de progreso mensual
+                this.dom.progresoMensualBarElement.style.width = `${progresoMensual}%`;
+                this.dom.progressMensualTextElement.textContent = `${progresoMensual.toFixed(1)}%`;
+                this.dom.progressMensualPercentageElement.textContent = `${progresoMensual.toFixed(1)}%`;
+                this.dom.progressMensualDetailsElement.textContent = `$${acumuladoMes.toFixed(2)} de $${this.metaMensual.toFixed(2)}`;
+                
+                // Cambiar color según el progreso
+                if (progresoMensual >= 100) {
+                    this.dom.progresoMensualBarElement.style.background = 'linear-gradient(90deg, var(--success), #16a34a)';
+                } else if (progresoMensual >= 70) {
+                    this.dom.progresoMensualBarElement.style.background = 'linear-gradient(90deg, var(--warning), #ea580c)';
+                } else {
+                    this.dom.progresoMensualBarElement.style.background = 'linear-gradient(90deg, var(--primary), var(--secondary))';
+                }
+                
+                // Actualizar lista de días trabajados
+                this.actualizarListaDiasTrabajados();
+            }
             
-            // Generar contenido del resumen
-            let contenidoHTML = `
-                <div class="resumen-destacado">
-                    <div class="resumen-item">
-                        <span class="resumen-label">Meta del día:</span>
-                        <span class="resumen-value">$${metaDiaria.toFixed(2)}</span>
+            // Actualizar lista de días trabajados optimizada
+            actualizarListaDiasTrabajados() {
+                this.dom.listaDiasTrabajadosElement.innerHTML = '';
+                
+                const diasDelMes = [];
+                for (const dayKey in this.diasTrabajados) {
+                    if (dayKey.endsWith(`-${this.currentMonth}-${this.currentYear}`)) {
+                        diasDelMes.push({
+                            key: dayKey,
+                            monto: this.diasTrabajados[dayKey]
+                        });
+                    }
+                }
+                
+                if (diasDelMes.length === 0) {
+                    this.dom.listaDiasTrabajadosElement.innerHTML = `
+                        <div style="text-align: center; color: var(--gray); padding: 20px;">
+                            <i class="fas fa-calendar" style="font-size: 40px; margin-bottom: 10px;"></i>
+                            <p>No hay días trabajados este mes</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Ordenar días por fecha (más recientes primero)
+                diasDelMes.sort((a, b) => {
+                    const [dayA, monthA, yearA] = a.key.split('-').map(Number);
+                    const [dayB, monthB, yearB] = b.key.split('-').map(Number);
+                    const dateA = new Date(yearA, monthA, dayA);
+                    const dateB = new Date(yearB, monthB, dayB);
+                    return dateB - dateA;
+                });
+                
+                // Usar DocumentFragment para mejor performance
+                const fragment = document.createDocumentFragment();
+                
+                diasDelMes.forEach(dia => {
+                    const [day, month, year] = dia.key.split('-').map(Number);
+                    const fecha = new Date(year, month, day);
+                    const diaElement = document.createElement('div');
+                    diaElement.className = 'trip-item';
+                    
+                    // Verificar si se alcanzó la meta
+                    const metaDiariaEsperada = this.metaMensual / (new Date(year, month + 1, 0).getDate() - this.diasDescanso.length);
+                    const alcanzada = dia.monto >= metaDiariaEsperada * 0.95;
+                    
+                    diaElement.innerHTML = `
+                        <div class="trip-info">
+                            <span class="trip-number">${day} de ${this.monthNames[month]} ${year}</span>
+                            <span class="trip-time">${fecha.toLocaleDateString('es-ES', { weekday: 'long' })}</span>
+                        </div>
+                        <span class="trip-amount" style="color: ${alcanzada ? 'var(--success)' : 'var(--danger)'}">
+                            $${dia.monto.toFixed(2)} ${alcanzada ? '✓' : '✗'}
+                        </span>
+                    `;
+                    fragment.appendChild(diaElement);
+                });
+                
+                this.dom.listaDiasTrabajadosElement.appendChild(fragment);
+            }
+            
+            // Aplicar meta mensual
+            aplicarMetaMensual() {
+                this.metaMensual = parseFloat(this.dom.metaMensualInput.value) || 3000;
+                this.actualizarResumenMensual();
+                
+                // Obtener la meta diaria sugerida
+                const metaDiariaSugerida = parseFloat(this.dom.metaDiariaSugeridaElement.textContent.replace('$', '').replace(',', ''));
+                
+                // Actualizar la meta diaria
+                this.metaDiaria = metaDiariaSugerida;
+                this.dom.totalGanarInput.value = metaDiariaSugerida.toFixed(2);
+                
+                // Recalcular objetivos
+                this.calcularObjetivos();
+                
+                // Actualizar resumen mensual completo
+                this.actualizarResumenMensualCompleto();
+                
+                // Guardar valores
+                this.guardarValores();
+            }
+            
+            // Calcular objetivos optimizado con memoización
+            calcularObjetivos() {
+                this.startPerformanceMark('calcularObjetivos');
+                
+                // Generar clave de caché
+                const metaDiaria = parseFloat(this.dom.totalGanarInput.value) || 136.36;
+                const horasDisponibles = parseFloat(this.dom.horasDisponiblesInput.value) || 8;
+                const tiempoPromedioViaje = parseFloat(this.dom.tiempoPromedioViajeInput.value) || 25;
+                
+                const cacheKey = `calc-${metaDiaria}-${horasDisponibles}-${tiempoPromedioViaje}`;
+                
+                // Verificar si tenemos el resultado en caché
+                if (this.calculationCache.has(cacheKey)) {
+                    const result = this.calculationCache.get(cacheKey);
+                    this.updateCalculatedFields(result);
+                    this.endPerformanceMark('calcularObjetivos');
+                    return;
+                }
+                
+                this.metaDiaria = metaDiaria;
+                this.tiempoPromedioViaje = tiempoPromedioViaje;
+                
+                // Calcular viajes por hora
+                const viajesPorHora = 60 / this.tiempoPromedioViaje;
+                
+                // Calcular viajes necesarios basados en tiempo disponible
+                const viajesNecesarios = Math.ceil(horasDisponibles * viajesPorHora);
+                
+                // Calcular costo promedio por viaje
+                this.costoPromedio = this.metaDiaria / viajesNecesarios;
+                
+                const result = {
+                    viajesNecesarios,
+                    viajesPorHora: viajesPorHora.toFixed(1),
+                    costoPromedio: this.costoPromedio
+                };
+                
+                // Guardar en caché
+                this.calculationCache.set(cacheKey, result);
+                
+                // Actualizar UI
+                this.updateCalculatedFields(result);
+                this.actualizarSugerencia();
+                this.actualizarEstadisticas();
+                this.actualizarProgreso();
+                
+                // Guardar valores
+                this.guardarValores();
+                this.endPerformanceMark('calcularObjetivos');
+            }
+            
+            // Actualizar campos calculados
+            updateCalculatedFields(result) {
+                this.dom.totalViajesInput.value = result.viajesNecesarios;
+                this.dom.costoPromedioInput.value = `$${result.costoPromedio.toFixed(2)}`;
+                this.dom.viajesPorHoraInput.value = result.viajesPorHora;
+                
+                // Actualizar la UI
+                this.dom.viajesNecesariosElement.textContent = result.viajesNecesarios;
+                this.dom.metaDisplayElement.textContent = `$${this.metaDiaria.toFixed(2)}`;
+            }
+            
+            // Registrar un nuevo viaje optimizado
+            registrarViaje() {
+                this.startPerformanceMark('registrarViaje');
+                const monto = parseFloat(this.dom.montoViajeInput.value);
+                
+                if (!this.isValidMonto(monto)) {
+                    this.mostrarNotificacion('Por favor ingresa un monto válido para el viaje.', 'error');
+                    this.endPerformanceMark('registrarViaje');
+                    return;
+                }
+                
+                // Procesar el viaje
+                const viajeData = this.processViaje(monto);
+                this.addViaje(viajeData);
+                this.processSaldo(viajeData);
+                this.autoUseSaldo();
+                
+                this.updateUI();
+                this.saveValues();
+                
+                // Limpiar input y focus para siguiente entrada
+                this.dom.montoViajeInput.value = '';
+                this.dom.montoViajeInput.focus();
+                this.endPerformanceMark('registrarViaje');
+            }
+            
+            // Validar monto
+            isValidMonto(monto) {
+                return !isNaN(monto) && monto > 0 && monto < 10000; // Límite razonable
+            }
+            
+            // Procesar datos del viaje
+            processViaje(monto) {
+                const ahora = new Date();
+                const sugerencia = this.getSugerenciaActual();
+                
+                let multiplicador = 1;
+                let resto = 0;
+                let tipo = 'normal';
+
+                if (sugerencia.minSugerido > 0 && monto < sugerencia.minSugerido) {
+                    tipo = 'saldo';
+                } else if (sugerencia.maxSugerido > 0 && monto > sugerencia.maxSugerido) {
+                    multiplicador = Math.floor(monto / this.costoPromedio);
+                    resto = monto % this.costoPromedio;
+                } else {
+                    resto = Math.max(0, monto - this.costoPromedio);
+                }
+
+                return {
+                    monto,
+                    hora: ahora.toLocaleTimeString(),
+                    timestamp: ahora.getTime(),
+                    multiplicador,
+                    resto,
+                    tipo
+                };
+            }
+            
+            // Obtener sugerencia actual
+            getSugerenciaActual() {
+                const sugerenciaText = this.dom.sugerenciaMontoElement.textContent;
+                const sugerenciaMatch = sugerenciaText.match(/\$([0-9.]+) - \$([0-9.]+)/);
+                
+                let minSugerido = 0;
+                let maxSugerido = 0;
+                
+                if (sugerenciaMatch && sugerenciaMatch.length >= 3) {
+                    minSugerido = parseFloat(sugerenciaMatch[1]);
+                    maxSugerido = parseFloat(sugerenciaMatch[2]);
+                }
+                
+                return { minSugerido, maxSugerido };
+            }
+            
+            // Agregar viaje a la lista
+            addViaje(viajeData) {
+                this.viajes.push(viajeData);
+                this.totalAcumulado += viajeData.monto;
+            }
+            
+            // Procesar saldo generado
+            processSaldo(viajeData) {
+                if (viajeData.resto > 0) {
+                    this.saldoAcumulado += viajeData.resto;
+                    this.dom.saldoAcumuladoElement.textContent = `$${this.saldoAcumulado.toFixed(2)}`;
+                    
+                    // Mostrar notificación de saldo generado
+                    this.dom.saldoMessage.textContent = `¡Has generado $${viajeData.resto.toFixed(2)} de saldo! Saldo total: $${this.saldoAcumulado.toFixed(2)}`;
+                    this.dom.saldoNotification.style.display = 'block';
+                    
+                    // Ocultar la notificación después de 5 segundos
+                    setTimeout(() => {
+                        this.dom.saldoNotification.style.display = 'none';
+                    }, 5000);
+                }
+            }
+            
+            // Usar saldo automáticamente
+            autoUseSaldo() {
+                // Verificar si hay suficiente saldo para al menos un viaje
+                while (this.saldoAcumulado >= this.costoPromedio) {
+                    // Usar el saldo para un viaje
+                    this.saldoAcumulado -= this.costoPromedio;
+                    this.dom.saldoAcumuladoElement.textContent = `$${this.saldoAcumulado.toFixed(2)}`;
+                    
+                    // Registrar un viaje con saldo (pero NO sumar al totalAcumulado)
+                    const ahora = new Date();
+                    this.viajes.push({
+                        monto: 0,
+                        hora: ahora.toLocaleTimeString(),
+                        timestamp: ahora.getTime(),
+                        multiplicador: 1,
+                        tipo: 'saldo'
+                    });
+                    
+                    // Mostrar notificación
+                    this.dom.saldoMessage.textContent = `¡Viaje generado automáticamente con saldo! Saldo restante: $${this.saldoAcumulado.toFixed(2)}`;
+                    this.dom.saldoNotification.style.display = 'block';
+                    
+                    // Ocultar la notificación después de 5 segundos
+                    setTimeout(() => {
+                        this.dom.saldoNotification.style.display = 'none';
+                    }, 5000);
+                    
+                    // Actualizar la UI
+                    this.actualizarProgreso();
+                    this.actualizarSugerencia();
+                    this.actualizarListaViajes();
+                    this.actualizarEstadisticas();
+                }
+            }
+            
+            // Mostrar resumen del día antes de finalizar
+            mostrarResumenDia() {
+                // Calcular estadísticas del día
+                const viajesRealizados = this.viajes.reduce((total, viaje) => total + (viaje.multiplicador || 0), 0);
+                const totalGanado = this.totalAcumulado;
+                const metaAlcanzada = totalGanado >= this.metaDiaria * 0.95;
+                const diferencia = totalGanado - this.metaDiaria;
+                
+                // Generar contenido del resumen
+                let contenidoHTML = `
+                    <div class="resumen-destacado">
+                        <div class="resumen-item">
+                            <span class="resumen-label">Meta del día:</span>
+                            <span class="resumen-value">$${this.metaDiaria.toFixed(2)}</span>
+                        </div>
+                        <div class="resumen-item">
+                            <span class="resumen-label">Total ganado:</span>
+                            <span class="resumen-value">$${totalGanado.toFixed(2)}</span>
+                        </div>
+                        <div class="resumen-item">
+                            <span class="resumen-label">Estado:</span>
+                            <span class="resumen-value" style="color: ${metaAlcanzada ? 'var(--success)' : 'var(--danger)'}">
+                                ${metaAlcanzada ? 'Meta Alcanzada ✓' : 'Meta No Alcanzada ✗'}
+                            </span>
+                        </div>
                     </div>
+                    
                     <div class="resumen-item">
-                        <span class="resumen-label">Total ganado:</span>
-                        <span class="resumen-value">$${totalGanado.toFixed(2)}</span>
-                    </div>
-                    <div class="resumen-item">
-                        <span class="resumen-label">Estado:</span>
-                        <span class="resumen-value" style="color: ${metaAlcanzada ? 'var(--success)' : 'var(--danger)'}">
-                            ${metaAlcanzada ? 'Meta Alcanzada ✓' : 'Meta No Alcanzada ✗'}
+                        <span class="resumen-label">Diferencia:</span>
+                        <span class="resumen-value" style="color: ${diferencia >= 0 ? 'var(--success)' : 'var(--danger)'}">
+                            $${diferencia.toFixed(2)}
                         </span>
                     </div>
-                </div>
-                
-                <div class="resumen-item">
-                    <span class="resumen-label">Diferencia:</span>
-                    <span class="resumen-value" style="color: ${diferencia >= 0 ? 'var(--success)' : 'var(--danger)'}">
-                        $${diferencia.toFixed(2)}
-                    </span>
-                </div>
-                
-                <div class="resumen-item">
-                    <span class="resumen-label">Viajes realizados:</span>
-                    <span class="resumen-value">${viajesRealizados}</span>
-                </div>
-                
-                <div class="resumen-item">
-                    <span class="resumen-label">Saldo acumulado:</span>
-                    <span class="resumen-value">$${saldoAcumulado.toFixed(2)}</span>
-                </div>
-            `;
-            
-            // Mostrar historial de viajes
-            contenidoHTML += `
-                <h3 style="margin-top: 20px; color: var(--primary);">Historial de Viajes</h3>
-                <div style="max-height: 200px; overflow-y: auto;">
-            `;
-            
-            if (viajes.length === 0) {
-                contenidoHTML += `
-                    <div style="text-align: center; color: var(--gray); padding: 10px;">
-                        <p>No hay viajes registrados hoy</p>
+                    
+                    <div class="resumen-item">
+                        <span class="resumen-label">Viajes realizados:</span>
+                        <span class="resumen-value">${viajesRealizados}</span>
+                    </div>
+                    
+                    <div class="resumen-item">
+                        <span class="resumen-label">Saldo acumulado:</span>
+                        <span class="resumen-value">$${this.saldoAcumulado.toFixed(2)}</span>
                     </div>
                 `;
-            } else {
-                // Ordenar viajes por timestamp (más recientes primero)
-                viajes.sort((a, b) => b.timestamp - a.timestamp);
                 
-                viajes.forEach((viaje, index) => {
+                // Mostrar historial de viajes
+                contenidoHTML += `
+                    <h3 style="margin-top: 20px; color: var(--primary);">Historial de Viajes</h3>
+                    <div style="max-height: 200px; overflow-y: auto;">
+                `;
+                
+                if (this.viajes.length === 0) {
+                    contenidoHTML += `
+                        <div style="text-align: center; color: var(--gray); padding: 10px;">
+                            <p>No hay viajes registrados hoy</p>
+                        </div>
+                    `;
+                } else {
+                    // Ordenar viajes por timestamp (más recientes primero)
+                    this.viajes.sort((a, b) => b.timestamp - a.timestamp);
+                    
+                    this.viajes.forEach((viaje, index) => {
+                        const multiplicadorBadge = viaje.multiplicador > 1 ? 
+                            `<span style="font-size: 10px; background: var(--warning); color: white; padding: 2px 5px; border-radius: 10px; margin-left: 5px;">x${viaje.multiplicador}</span>` : '';
+                        
+                        if (viaje.tipo === 'saldo') {
+                            contenidoHTML += `
+                                <div class="resumen-item">
+                                    <span class="resumen-label">Viaje #${this.viajes.length - index} ${multiplicadorBadge}</span>
+                                    <span class="resumen-value" style="color: var(--warning)">Viaje con saldo</span>
+                                </div>
+                            `;
+                        } else {
+                            contenidoHTML += `
+                                <div class="resumen-item">
+                                    <span class="resumen-label">Viaje #${this.viajes.length - index} ${multiplicadorBadge}</span>
+                                    <span class="resumen-value">$${viaje.monto.toFixed(2)}</span>
+                                </div>
+                            `;
+                        }
+                    });
+                }
+                
+                contenidoHTML += `</div>`;
+                
+                // Actualizar contenido del modal
+                this.dom.resumenDiaContent.innerHTML = contenidoHTML;
+                
+                // Mostrar modal
+                this.dom.modalResumenDia.style.display = 'flex';
+            }
+            
+            // Finalizar el día (guardar progreso pero mantener datos)
+            finalizarDia() {
+                // Ocultar modal
+                this.dom.modalResumenDia.style.display = 'none';
+                
+                // Guardar el total del día en el historial de días trabajados
+                const hoy = new Date();
+                const dayKey = `${hoy.getDate()}-${hoy.getMonth()}-${hoy.getFullYear()}`;
+                
+                // Sumar el acumulado actual al día (por si ya existía)
+                this.diasTrabajados[dayKey] = (this.diasTrabajados[dayKey] || 0) + this.totalAcumulado;
+                
+                // Reiniciar contadores del día
+                this.viajes = [];
+                this.totalAcumulado = 0;
+                this.saldoAcumulado = 0;
+                
+                // Ocultar notificaciones
+                this.dom.saldoNotification.style.display = 'none';
+                
+                // Actualizar la UI
+                this.actualizarProgreso();
+                this.actualizarSugerencia();
+                this.actualizarListaViajes();
+                this.actualizarEstadisticas();
+                this.dom.saldoAcumuladoElement.textContent = `$${this.saldoAcumulado.toFixed(2)}`;
+                
+                // Actualizar resumen mensual
+                this.actualizarResumenMensualCompleto();
+                
+                // Regenerar el calendario para actualizar los días marcados
+                this.generarCalendario();
+                
+                // Guardar valores
+                this.guardarValores();
+                
+                this.mostrarNotificacion('Día finalizado correctamente. Los datos se han guardado en el historial mensual.', 'success');
+            }
+            
+            // Reiniciar el día
+            reiniciarDia() {
+                if (confirm('¿Estás seguro de que quieres reiniciar el día? Se borrarán todos los viajes registrados y el saldo acumulado.')) {
+                    // Guardar el total del día en el historial de días trabajados
+                    if (this.totalAcumulado > 0) {
+                        const today = new Date();
+                        const dayKey = `${today.getDate()}-${today.getMonth()}-${today.getFullYear()}`;
+                        this.diasTrabajados[dayKey] = this.totalAcumulado;
+                    }
+                    
+                    this.viajes = [];
+                    this.totalAcumulado = 0;
+                    this.saldoAcumulado = 0;
+                    
+                    // Ocultar notificaciones
+                    this.dom.saldoNotification.style.display = 'none';
+                    
+                    // Actualizar la UI
+                    this.actualizarProgreso();
+                    this.actualizarSugerencia();
+                    this.actualizarListaViajes();
+                    this.actualizarEstadisticas();
+                    this.dom.saldoAcumuladoElement.textContent = `$${this.saldoAcumulado.toFixed(2)}`;
+                    
+                    // Actualizar resumen mensual
+                    this.actualizarResumenMensualCompleto();
+                    
+                    // Guardar valores
+                    this.guardarValores();
+                }
+            }
+            
+            // Reiniciar el mes
+            reiniciarMes() {
+                if (confirm('¿Estás seguro de que quieres reiniciar el mes actual? Se borrarán todos los datos de este mes, incluyendo días trabajados.')) {
+                    // Eliminar todos los días trabajados del mes actual
+                    for (const dayKey in this.diasTrabajados) {
+                        if (dayKey.endsWith(`-${this.currentMonth}-${this.currentYear}`)) {
+                            delete this.diasTrabajados[dayKey];
+                        }
+                    }
+                    
+                    // Si estamos en el día actual, reiniciar también el día
+                    const today = new Date();
+                    if (this.currentMonth === today.getMonth() && this.currentYear === today.getFullYear()) {
+                        this.viajes = [];
+                        this.totalAcumulado = 0;
+                        this.saldoAcumulado = 0;
+                        
+                        // Actualizar la UI del día
+                        this.actualizarProgreso();
+                        this.actualizarSugerencia();
+                        this.actualizarListaViajes();
+                        this.actualizarEstadisticas();
+                        this.dom.saldoAcumuladoElement.textContent = `$${this.saldoAcumulado.toFixed(2)}`;
+                    }
+                    
+                    // Actualizar resumen mensual
+                    this.actualizarResumenMensualCompleto();
+                    
+                    // Regenerar el calendario para actualizar los días marcados
+                    this.generarCalendario();
+                    
+                    // Guardar valores
+                    this.guardarValores();
+                }
+            }
+            
+            // Actualizar la barra de progreso
+            actualizarProgreso() {
+                // Calcular el progreso en dinero (0-100%)
+                const progresoDinero = Math.min(100, (this.totalAcumulado / this.metaDiaria) * 100);
+                
+                // Actualizar elementos de UI
+                this.dom.progresoElement.style.width = `${progresoDinero}%`;
+                this.dom.progressTextElement.textContent = `${progresoDinero.toFixed(1)}%`;
+                this.dom.progressPercentageElement.textContent = `${progresoDinero.toFixed(1)}%`;
+                
+                // Detalles del progreso
+                this.dom.progressDetailsElement.textContent = `$${this.totalAcumulado.toFixed(2)} de $${this.metaDiaria.toFixed(2)}`;
+                
+                // Cambiar color según el progreso
+                if (progresoDinero >= 100) {
+                    this.dom.progresoElement.style.background = 'linear-gradient(90deg, var(--success), #16a34a)';
+                } else if (progresoDinero >= 70) {
+                    this.dom.progresoElement.style.background = 'linear-gradient(90deg, var(--warning), #ea580c)';
+                } else {
+                    this.dom.progresoElement.style.background = 'linear-gradient(90deg, var(--primary), var(--secondary))';
+                }
+            }
+            
+            // Actualizar la sugerencia para el próximo viaje
+            actualizarSugerencia() {
+                // Calcular el total de viajes equivalentes realizados
+                const viajesRealizados = this.viajes.reduce((total, viaje) => total + (viaje.multiplicador || 0), 0);
+                
+                const viajesNecesarios = parseInt(this.dom.totalViajesInput.value) || 0;
+                const viajesRestantes = Math.max(0, viajesNecesarios - viajesRealizados);
+                
+                // Calcular el dinero restante para alcanzar la meta
+                const dineroRestante = Math.max(0, this.metaDiaria - this.totalAcumulado);
+                
+                if (viajesRestantes <= 0 || dineroRestante <= 0) {
+                    this.dom.sugerenciaMontoElement.textContent = '¡Meta alcanzada!';
+                    this.dom.viajesFaltantesElement.textContent = '0';
+                    return;
+                }
+                
+                // Calcular el monto sugerido para cada viaje restante
+                const montoSugeridoPorViaje = dineroRestante / viajesRestantes;
+                
+                // Ajustar el rango sugerido (80% - 120% del monto ideal)
+                const montoSugeridoMin = montoSugeridoPorViaje * 0.8;
+                const montoSugeridoMax = montoSugeridoPorViaje * 1.2;
+                
+                // Asegurarse de que el monto mínimo no sea menor que el 70% del costo promedio
+                const montoMinimoAjustado = Math.max(montoSugeridoMin, this.costoPromedio * 0.7);
+                
+                this.dom.sugerenciaMontoElement.textContent = `$${montoMinimoAjustado.toFixed(2)} - $${montoSugeridoMax.toFixed(2)}`;
+                this.dom.viajesFaltantesElement.textContent = viajesRestantes;
+            }
+            
+            // Actualizar estadísticas
+            actualizarEstadisticas() {
+                // Calcular el total de viajes equivalentes realizados
+                const viajesRealizados = this.viajes.reduce((total, viaje) => total + (viaje.multiplicador || 0), 0);
+                
+                // Actualizar UI
+                this.dom.viajesRealizadosElement.textContent = viajesRealizados;
+                this.dom.dineroAcumuladoElement.textContent = `$${this.totalAcumulado.toFixed(2)}`;
+            }
+            
+            // Actualizar la lista de viajes optimizada
+            actualizarListaViajes() {
+                this.dom.listaViajesElement.innerHTML = '';
+                
+                if (this.viajes.length === 0) {
+                    this.dom.listaViajesElement.innerHTML = `
+                        <div style="text-align: center; color: var(--gray); padding: 20px;">
+                            <i class="fas fa-taxi" style="font-size: 40px; margin-bottom: 10px;"></i>
+                            <p>No hay viajes registrados aún</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Ordenar viajes por timestamp (más recientes primero)
+                this.viajes.sort((a, b) => b.timestamp - a.timestamp);
+                
+                // Usar DocumentFragment para mejor performance
+                const fragment = document.createDocumentFragment();
+                
+                this.viajes.forEach((viaje, index) => {
+                    const viajeElement = document.createElement('div');
+                    viajeElement.className = viaje.tipo === 'saldo' ? 'trip-item trip-with-saldo' : 'trip-item';
+                    
+                    // Añadir indicador visual para viajes con multiplicador
                     const multiplicadorBadge = viaje.multiplicador > 1 ? 
                         `<span style="font-size: 10px; background: var(--warning); color: white; padding: 2px 5px; border-radius: 10px; margin-left: 5px;">x${viaje.multiplicador}</span>` : '';
                     
                     if (viaje.tipo === 'saldo') {
-                        contenidoHTML += `
-                            <div class="resumen-item">
-                                <span class="resumen-label">Viaje #${viajes.length - index} ${multiplicadorBadge}</span>
-                                <span class="resumen-value" style="color: var(--warning)">Viaje con saldo</span>
+                        viajeElement.innerHTML = `
+                            <div class="trip-info">
+                                <span class="trip-number">Viaje #${this.viajes.length - index} ${multiplicadorBadge}</span>
+                                <span class="trip-time">${viaje.hora}</span>
                             </div>
+                            <span class="trip-amount" style="color: var(--warning);">Viaje con saldo</span>
                         `;
                     } else {
-                        contenidoHTML += `
-                            <div class="resumen-item">
-                                <span class="resumen-label">Viaje #${viajes.length - index} ${multiplicadorBadge}</span>
-                                <span class="resumen-value">$${viaje.monto.toFixed(2)}</span>
+                        viajeElement.innerHTML = `
+                            <div class="trip-info">
+                                <span class="trip-number">Viaje #${this.viajes.length - index} ${multiplicadorBadge}</span>
+                                <span class="trip-time">${viaje.hora}</span>
                             </div>
+                            <span class="trip-amount">$${viaje.monto.toFixed(2)}</span>
                         `;
                     }
+                    fragment.appendChild(viajeElement);
                 });
+                
+                this.dom.listaViajesElement.appendChild(fragment);
             }
             
-            contenidoHTML += `</div>`;
-            
-            // Actualizar contenido del modal
-            resumenDiaContent.innerHTML = contenidoHTML;
-            
-            // Mostrar modal
-            modalResumenDia.style.display = 'flex';
-        }
-        
-        // Finalizar el día (guardar progreso pero mantener datos)
-        function finalizarDia() {
-            // Ocultar modal
-            modalResumenDia.style.display = 'none';
-            
-            // Guardar el total del día en el historial de días trabajados
-            const hoy = new Date();
-            const dayKey = `${hoy.getDate()}-${hoy.getMonth()}-${hoy.getFullYear()}`;
-            
-            // Sumar el acumulado actual al día (por si ya existía)
-            diasTrabajados[dayKey] = (diasTrabajados[dayKey] || 0) + totalAcumulado;
-            
-            // Reiniciar contadores del día
-            viajes = [];
-            totalAcumulado = 0;
-            saldoAcumulado = 0;
-            
-            // Ocultar notificaciones
-            saldoNotification.style.display = 'none';
-            
-            // Actualizar la UI
-            actualizarProgreso();
-            actualizarSugerencia();
-            actualizarListaViajes();
-            actualizarEstadisticas();
-            saldoAcumuladoElement.textContent = `$${saldoAcumulado.toFixed(2)}`;
-            
-            // Actualizar resumen mensual
-            actualizarResumenMensualCompleto();
-            
-            // Regenerar el calendario para actualizar los días marcados
-            generarCalendario();
-            
-            // Guardar valores
-            guardarValores();
-            
-            mostrarNotificacion('Día finalizado correctamente. Los datos se han guardado en el historial mensual.', 'success');
-        }
-        
-        // Reiniciar el día
-        function reiniciarDia() {
-            if (confirm('¿Estás seguro de que quieres reiniciar el día? Se borrarán todos los viajes registrados y el saldo acumulado.')) {
-                // Guardar el total del día en el historial de días trabajados
-                if (totalAcumulado > 0) {
-                    const today = new Date();
-                    const dayKey = `${today.getDate()}-${today.getMonth()}-${today.getFullYear()}`;
-                    diasTrabajados[dayKey] = totalAcumulado;
-                }
+            // Función auxiliar para mostrar notificaciones optimizada
+            mostrarNotificacion(mensaje, tipo = 'success') {
+                // Crear elemento de notificación
+                const notificacion = document.createElement('div');
+                notificacion.className = `notification notification-${tipo}`;
                 
-                viajes = [];
-                totalAcumulado = 0;
-                saldoAcumulado = 0;
+                // Configurar icono según el tipo
+                const iconos = {
+                    success: 'check-circle',
+                    error: 'exclamation-triangle',
+                    warning: 'exclamation-circle'
+                };
                 
-                // Ocultar notificaciones
-                saldoNotification.style.display = 'none';
-                
-                // Actualizar la UI
-                actualizarProgreso();
-                actualizarSugerencia();
-                actualizarListaViajes();
-                actualizarEstadisticas();
-                saldoAcumuladoElement.textContent = `$${saldoAcumulado.toFixed(2)}`;
-                
-                // Actualizar resumen mensual
-                actualizarResumenMensualCompleto();
-                
-                // Guardar valores
-                guardarValores();
-            }
-        }
-        
-        // Reiniciar el mes
-        function reiniciarMes() {
-            if (confirm('¿Estás seguro de que quieres reiniciar el mes actual? Se borrarán todos los datos de este mes, incluyendo días trabajados.')) {
-                // Eliminar todos los días trabajados del mes actual
-                for (const dayKey in diasTrabajados) {
-                    if (dayKey.endsWith(`-${currentMonth}-${currentYear}`)) {
-                        delete diasTrabajados[dayKey];
-                    }
-                }
-                
-                // Si estamos en el día actual, reiniciar también el día
-                const today = new Date();
-                if (currentMonth === today.getMonth() && currentYear === today.getFullYear()) {
-                    viajes = [];
-                    totalAcumulado = 0;
-                    saldoAcumulado = 0;
-                    
-                    // Actualizar la UI del día
-                    actualizarProgreso();
-                    actualizarSugerencia();
-                    actualizarListaViajes();
-                    actualizarEstadisticas();
-                    saldoAcumuladoElement.textContent = `$${saldoAcumulado.toFixed(2)}`;
-                }
-                
-                // Actualizar resumen mensual
-                actualizarResumenMensualCompleto();
-                
-                // Regenerar el calendario para actualizar los días marcados
-                generarCalendario();
-                
-                // Guardar valores
-                guardarValores();
-            }
-        }
-        
-        // Actualizar la barra de progreso
-        function actualizarProgreso() {
-            // Calcular el progreso en dinero (0-100%)
-            const progresoDinero = Math.min(100, (totalAcumulado / metaDiaria) * 100);
-            
-            // Actualizar elementos de UI
-            progresoElement.style.width = `${progresoDinero}%`;
-            progressTextElement.textContent = `${progresoDinero.toFixed(1)}%`;
-            progressPercentageElement.textContent = `${progresoDinero.toFixed(1)}%`;
-            
-            // Detalles del progreso
-            progressDetailsElement.textContent = `$${totalAcumulado.toFixed(2)} de $${metaDiaria.toFixed(2)}`;
-            
-            // Cambiar color según el progreso
-            if (progresoDinero >= 100) {
-                progresoElement.style.background = 'linear-gradient(90deg, var(--success), #16a34a)';
-            } else if (progresoDinero >= 70) {
-                progresoElement.style.background = 'linear-gradient(90deg, var(--warning), #ea580c)';
-            } else {
-                progresoElement.style.background = 'linear-gradient(90deg, var(--primary), var(--secondary))';
-            }
-        }
-        
-        // Actualizar la sugerencia para el próximo viaje
-        function actualizarSugerencia() {
-            // Calcular el total de viajes equivalentes realizados
-            const viajesRealizados = viajes.reduce((total, viaje) => total + (viaje.multiplicador || 0), 0);
-            
-            const viajesNecesarios = parseInt(totalViajesInput.value) || 0;
-            const viajesRestantes = Math.max(0, viajesNecesarios - viajesRealizados);
-            
-            // Calcular el dinero restante para alcanzar la meta
-            const dineroRestante = Math.max(0, metaDiaria - totalAcumulado);
-            
-            if (viajesRestantes <= 0 || dineroRestante <= 0) {
-                sugerenciaMontoElement.textContent = '¡Meta alcanzada!';
-                viajesFaltantesElement.textContent = '0';
-                return;
-            }
-            
-            // Calcular el monto sugerido para cada viaje restante
-            const montoSugeridoPorViaje = dineroRestante / viajesRestantes;
-            
-            // Ajustar el rango sugerido (80% - 120% del monto ideal)
-            const montoSugeridoMin = montoSugeridoPorViaje * 0.8;
-            const montoSugeridoMax = montoSugeridoPorViaje * 1.2;
-            
-            // Asegurarse de que el monto mínimo no sea menor que el 70% del costo promedio
-            const montoMinimoAjustado = Math.max(montoSugeridoMin, costoPromedio * 0.7);
-            
-            sugerenciaMontoElement.textContent = `$${montoMinimoAjustado.toFixed(2)} - $${montoSugeridoMax.toFixed(2)}`;
-            viajesFaltantesElement.textContent = viajesRestantes;
-        }
-        
-        // Actualizar estadísticas
-        function actualizarEstadisticas() {
-            // Calcular el total de viajes equivalentes realizados
-            const viajesRealizados = viajes.reduce((total, viaje) => total + (viaje.multiplicador || 0), 0);
-            
-            // Actualizar UI
-            viajesRealizadosElement.textContent = viajesRealizados;
-            dineroAcumuladoElement.textContent = `$${totalAcumulado.toFixed(2)}`;
-        }
-        
-        // Actualizar la lista de viajes
-        function actualizarListaViajes() {
-            listaViajesElement.innerHTML = '';
-            
-            if (viajes.length === 0) {
-                listaViajesElement.innerHTML = `
-                    <div style="text-align: center; color: var(--gray); padding: 20px;">
-                        <i class="fas fa-taxi" style="font-size: 40px; margin-bottom: 10px;"></i>
-                        <p>No hay viajes registrados aún</p>
+                notificacion.innerHTML = `
+                    <div class="notification-content">
+                        <i class="fas fa-${iconos[tipo] || 'info-circle'}"></i>
+                        <span>${mensaje}</span>
                     </div>
+                    <button class="notification-close">&times;</button>
                 `;
-                return;
-            }
-            
-            // Ordenar viajes por timestamp (más recientes primero)
-            viajes.sort((a, b) => b.timestamp - a.timestamp);
-            
-            viajes.forEach((viaje, index) => {
-                const viajeElement = document.createElement('div');
-                viajeElement.className = viaje.tipo === 'saldo' ? 'trip-item trip-with-saldo' : 'trip-item';
                 
-                // Añadir indicador visual para viajes con multiplicador
-                const multiplicadorBadge = viaje.multiplicador > 1 ? 
-                    `<span style="font-size: 10px; background: var(--warning); color: white; padding: 2px 5px; border-radius: 10px; margin-left: 5px;">x${viaje.multiplicador}</span>` : '';
-                
-                if (viaje.tipo === 'saldo') {
-                    viajeElement.innerHTML = `
-                        <div class="trip-info">
-                            <span class="trip-number">Viaje #${viajes.length - index} ${multiplicadorBadge}</span>
-                            <span class="trip-time">${viaje.hora}</span>
-                        </div>
-                        <span class="trip-amount" style="color: var(--warning);">Viaje con saldo</span>
-                    `;
-                } else {
-                    viajeElement.innerHTML = `
-                        <div class="trip-info">
-                            <span class="trip-number">Viaje #${viajes.length - index} ${multiplicadorBadge}</span>
-                            <span class="trip-time">${viaje.hora}</span>
-                        </div>
-                        <span class="trip-amount">$${viaje.monto.toFixed(2)}</span>
-                    `;
-                }
-                listaViajesElement.appendChild(viajeElement);
-            });
-        }
-        
-        // Función auxiliar para mostrar notificaciones
-        function mostrarNotificacion(mensaje, tipo) {
-            // Crear elemento de notificación si no existe
-            let notificacion = document.getElementById('notificacionGlobal');
-            if (!notificacion) {
-                notificacion = document.createElement('div');
-                notificacion.id = 'notificacionGlobal';
-                notificacion.style.cssText = `
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    padding: 15px 20px;
-                    border-radius: 8px;
-                    color: white;
-                    font-weight: bold;
-                    z-index: 1000;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                    max-width: 300px;
-                    transition: all 0.3s ease;
-                `;
                 document.body.appendChild(notificacion);
+                
+                // Animación de entrada
+                requestAnimationFrame(() => {
+                    notificacion.classList.add('show');
+                });
+                
+                // Configurar cierre
+                const closeBtn = notificacion.querySelector('.notification-close');
+                closeBtn.addEventListener('click', () => {
+                    notificacion.classList.remove('show');
+                    setTimeout(() => {
+                        if (notificacion.parentNode) {
+                            notificacion.parentNode.removeChild(notificacion);
+                        }
+                    }, 300);
+                });
+                
+                // Auto-remover después de 4 segundos
+                setTimeout(() => {
+                    if (notificacion.parentNode) {
+                        notificacion.classList.remove('show');
+                        setTimeout(() => {
+                            if (notificacion.parentNode) {
+                                notificacion.parentNode.removeChild(notificacion);
+                            }
+                        }, 300);
+                    }
+                }, 4000);
             }
             
-            // Configurar colores según el tipo
-            const colores = {
-                success: '#10b981',
-                warning: '#f59e0b',
-                error: '#ef4444'
-            };
+            // Helper para obtener clave del día
+            getDayKey(date) {
+                return `${date.getDate()}-${date.getMonth()}-${date.getFullYear()}`;
+            }
             
-            notificacion.style.backgroundColor = colores[tipo] || colores.success;
-            notificacion.textContent = mensaje;
-            notificacion.style.display = 'block';
+            // Guardar valores en localStorage optimizado
+            guardarValores() {
+                const datos = {
+                    metaDiaria: this.metaDiaria,
+                    metaMensual: this.metaMensual,
+                    costoPromedio: this.costoPromedio,
+                    tiempoPromedioViaje: this.tiempoPromedioViaje,
+                    viajes: this.viajes,
+                    totalAcumulado: this.totalAcumulado,
+                    saldoAcumulado: this.saldoAcumulado,
+                    diasDescanso: this.diasDescanso,
+                    diasTrabajados: this.diasTrabajados,
+                    totalGanar: parseFloat(this.dom.totalGanarInput.value),
+                    horasDisponibles: parseFloat(this.dom.horasDisponiblesInput.value)
+                };
+                
+                // Guardar por mes y año para tener configuraciones individuales
+                localStorage.setItem(`calculadoraUber_${this.currentMonth}_${this.currentYear}`, JSON.stringify(datos));
+            }
             
-            // Ocultar después de 4 segundos
-            setTimeout(() => {
-                notificacion.style.display = 'none';
-            }, 4000);
-        }
-        
-        // Guardar valores en localStorage
-        function guardarValores() {
-            const datos = {
-                metaDiaria,
-                metaMensual,
-                costoPromedio,
-                tiempoPromedioViaje,
-                viajes,
-                totalAcumulado,
-                saldoAcumulado,
-                diasDescanso,
-                diasTrabajados,
-                totalGanar: parseFloat(totalGanarInput.value),
-                horasDisponibles: parseFloat(horasDisponiblesInput.value)
-            };
-            
-            // Guardar por mes y año para tener configuraciones individuales
-            localStorage.setItem(`calculadoraUber_${currentMonth}_${currentYear}`, JSON.stringify(datos));
-        }
-        
-        // Cargar valores desde localStorage
-        function cargarValoresGuardados() {
-            // Cargar datos de la calculadora para el mes y año actual
-            const datosGuardados = localStorage.getItem(`calculadoraUber_${currentMonth}_${currentYear}`);
-            
-            if (datosGuardados) {
-                const datos = JSON.parse(datosGuardados);
+            // Cargar valores desde localStorage
+            cargarValoresGuardados() {
+                // Cargar datos de la calculadora para el mes y año actual
+                const datosGuardados = localStorage.getItem(`calculadoraUber_${this.currentMonth}_${this.currentYear}`);
                 
-                totalGanarInput.value = datos.totalGanar || 136.36;
-                horasDisponiblesInput.value = datos.horasDisponibles || 8;
-                tiempoPromedioViajeInput.value = datos.tiempoPromedioViaje || 25;
-                viajes = datos.viajes || [];
-                totalAcumulado = datos.totalAcumulado || 0;
-                saldoAcumulado = datos.saldoAcumulado || 0;
-                
-                // Si hay datos antiguos, mantener compatibilidad
-                if (datos.metaDiaria) metaDiaria = datos.metaDiaria;
-                if (datos.costoPromedio) costoPromedio = datos.costoPromedio;
-                
-                // Cargar datos de planificación mensual si existen
-                if (datos.metaMensual) {
-                    metaMensual = datos.metaMensual;
-                    metaMensualInput.value = metaMensual;
-                }
-                
-                if (datos.diasDescanso) {
-                    diasDescanso = datos.diasDescanso;
+                if (datosGuardados) {
+                    try {
+                        const datos = JSON.parse(datosGuardados);
+                        
+                        this.dom.totalGanarInput.value = datos.totalGanar || 136.36;
+                        this.dom.horasDisponiblesInput.value = datos.horasDisponibles || 8;
+                        this.dom.tiempoPromedioViajeInput.value = datos.tiempoPromedioViaje || 25;
+                        this.viajes = datos.viajes || [];
+                        this.totalAcumulado = datos.totalAcumulado || 0;
+                        this.saldoAcumulado = datos.saldoAcumulado || 0;
+                        
+                        // Si hay datos antiguos, mantener compatibilidad
+                        if (datos.metaDiaria) this.metaDiaria = datos.metaDiaria;
+                        if (datos.costoPromedio) this.costoPromedio = datos.costoPromedio;
+                        
+                        // Cargar datos de planificación mensual si existen
+                        if (datos.metaMensual) {
+                            this.metaMensual = datos.metaMensual;
+                            this.dom.metaMensualInput.value = this.metaMensual;
+                        }
+                        
+                        if (datos.diasDescanso) {
+                            this.diasDescanso = datos.diasDescanso;
+                        } else {
+                            this.diasDescanso = [];
+                        }
+                        
+                        if (datos.diasTrabajados) {
+                            this.diasTrabajados = datos.diasTrabajados;
+                        } else {
+                            this.diasTrabajados = {};
+                        }
+                    } catch (e) {
+                        console.error('Error al cargar datos guardados:', e);
+                        this.inicializarValoresPorDefecto();
+                    }
                 } else {
-                    diasDescanso = [];
+                    this.inicializarValoresPorDefecto();
                 }
-                
-                if (datos.diasTrabajados) {
-                    diasTrabajados = datos.diasTrabajados;
-                } else {
-                    diasTrabajados = {};
-                }
-            } else {
-                // Si no hay datos para este mes, inicializar con valores por defecto
-                viajes = [];
-                totalAcumulado = 0;
-                saldoAcumulado = 0;
-                diasDescanso = [];
-                diasTrabajados = {};
+            }
+
+            // Inicializar valores por defecto
+            inicializarValoresPorDefecto() {
+                this.viajes = [];
+                this.totalAcumulado = 0;
+                this.saldoAcumulado = 0;
+                this.diasDescanso = [];
+                this.diasTrabajados = {};
                 
                 // Aplicar la meta mensual para calcular días laborables y meta diaria sugerida
-                aplicarMetaMensual();
+                this.aplicarMetaMensual();
             }
             
-            // Actualizar la UI
-            actualizarUI();
+            // Alias para guardar valores (compatibilidad)
+            saveValues() {
+                this.guardarValores();
+            }
+
+            // Cargar valores guardados (alias para compatibilidad)
+            loadSavedValues() {
+                this.cargarValoresGuardados();
+            }
+            
+            // Monitoreo de performance
+            setupPerformanceMonitoring() {
+                if ('performance' in window) {
+                    this.performanceMarks = new Map();
+                }
+            }
+
+            startPerformanceMark(name) {
+                if (this.performanceMarks) {
+                    this.performanceMarks.set(name, performance.now());
+                }
+            }
+
+            endPerformanceMark(name) {
+                if (this.performanceMarks && this.performanceMarks.has(name)) {
+                    const duration = performance.now() - this.performanceMarks.get(name);
+                    // Solo mostrar en consola si es lento (más de 16ms - un frame a 60fps)
+                    if (duration > 16) {
+                        console.warn(`Slow operation detected: ${name} took ${duration.toFixed(2)}ms`);
+                    }
+                }
+            }
         }
-        
+
         // Inicializar la aplicación cuando se cargue la página
-        window.addEventListener('DOMContentLoaded', inicializar);
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const calculator = new UberCalculator();
+                
+                // Exponer globalmente para debugging si es necesario
+                window.uberCalculator = calculator;
+            } catch (error) {
+                console.error('Error al inicializar la aplicación:', error);
+                
+                // Mostrar error al usuario de forma más amigable
+                const errorDiv = document.createElement('div');
+                errorDiv.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: #ef4444;
+                    color: white;
+                    padding: 15px 20px;
+                    border-radius: 8px;
+                    z-index: 10000;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    max-width: 300px;
+                    text-align: center;
+                `;
+                errorDiv.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>Error al cargar la aplicación. Por favor, recarga la página.</span>
+                    </div>
+                `;
+                document.body.appendChild(errorDiv);
+            }
+        });
     </script>
 </body>
 </html>
