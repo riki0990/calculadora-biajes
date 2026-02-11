@@ -1901,10 +1901,10 @@
                 // Calcular el monto sugerido para cada viaje restante
                 const montoSugeridoPorViaje = dineroRestante / viajesRestantes;
                 
-                // Ajustar el rango sugerido (80% - 120% del monto ideal)
-                const montoSugeridoMin = montoSugeridoPorViaje * 0.8;
-                const montoSugeridoMax = montoSugeridoPorViaje * 1.2;
-                
+                // Ajustar el rango sugerido (90% - 120% del monto ideal)
+                const montoSugeridoMin = montoSugeridoPorViaje * 0.90;
+                const montoSugeridoMax = montoSugeridoPorViaje * 1.20;
+            
                 // Asegurarse de que el monto mínimo no sea menor que el 70% del costo promedio
                 const montoMinimoAjustado = Math.max(montoSugeridoMin, this.costoPromedio * 0.7);
                 
