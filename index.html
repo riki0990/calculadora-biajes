@@ -1091,7 +1091,7 @@
                 });
             }
 
-            // Manejo de pestañas optimizado
+            // Manejo de pestañas optimizado - CORREGIDO: classlist -> classList
             handleTabChange(tabId) {
                 // Desactivar todas las pestañas
                 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -1099,7 +1099,7 @@
                 
                 // Activar la pestaña seleccionada
                 document.querySelector(`.tab[data-tab="${tabId}"]`).classList.add('active');
-                document.getElementById(`tab-${tabId}`).classlist.add('active');
+                document.getElementById(`tab-${tabId}`).classList.add('active');
                 
                 // Si es la pestaña de mes, actualizar el resumen
                 if (tabId === 'mes') {
